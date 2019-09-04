@@ -19,26 +19,26 @@ function lfpShft = ZavSynchLFP(zavp, hd, segms, segmEdge, lfpEx, rCh, rawData, n
 %
 %OUTPUTS
 %lfpShft - lfp phased with respect to stimulus moments
+%
 
-rSw = unique(segms(:, 3));%unique sweeps to be read
 if rawData %raw data requested
-    segmEdge = segmEdge * zavp.rarStep;%left and right shifts from synchro-point (samples)
-    segms(:, 1) = segms(:, 1) * zavp.rarStep + 1;%position of synchro-impuls (samples)
+    segmEdge = round(segmEdge * zavp.rarStep);%left and right shifts from synchro-point (samples)
+    segms(:, 1) = round(segms(:, 1) * zavp.rarStep) + 1;%position of synchro-impuls (samples)
 else %resampled data requested
-    segms(:, 1) = segms(:, 1) + 1;%position of synchro-impuls (samples)
+    segms(:, 1) = round(segms(:, 1)) + 1;%position of synchro-impuls (samples)
 end
 segmLen = diff(segmEdge) + 1;%length of needed segments (samples)
-segms(:, 1) = round(segms(:, 1));%rounding of noninterg milliseconds
 
-lfpShft = zeros(segmLen, numel(rCh), size(segms, 1));%lfp phased with respect to stimuli moments
-for ch = 1:numel(rCh)
-    if rawData %need raw data
-        lfp = ZavLoadData(zavp.file, hd, rCh(ch), rSw, 0, 'e', nlxVer);%original (raw) data (single channel only)
-    else
-        lfp = squeeze(lfpEx(:, rCh(ch), rSw));%current channel only
+lfpShft = zeros(segmLen, length(rCh), size(segms, 1));%lfp phased with respect to stimuli moments
+if rawData %read raw data
+    for sn = 1:size(segms, 1) %run over segments
+        p1 = (segms(sn, 1) + segmEdge(1)) * hd.si / 1e3;%start time (ms from record begin)
+        p2 = (segms(sn, 1) + segmEdge(2)) * hd.si / 1e3;%end time (ms from record begin)
+        lfpShft(:, :, sn) = ZavLoadData(zavp.file, hd, rCh, segms(sn, 3), p1, p2, nlxVer);%raw data phased with respect to synchro-event
     end
-    dataLen = size(lfp, 1);%length of part of data
-    for sn = 1:size(segms, 1)
+else %read resampled data
+    dataLen = size(lfpEx, 1);%length of part of data
+    for sn = 1:size(segms, 1) %run over segments
         siPsn = segms(sn, 1);%position of synchro-impuls (ms)
         k = siPsn + segmEdge(1);%negative number equal to number of points to be skipped
         p1 = max(1, k);%first point to be read from lfp
@@ -46,6 +46,7 @@ for ch = 1:numel(rCh)
         p2 = min(siPsn + segmEdge(2), dataLen);%last point to be read from lfp
         t = siPsn + segmEdge(2) - dataLen;%negative number equal to number of points to be skipped
         t = t * (t >= 0);%(size(lfpShft, 1) - t) - last point in lfpShft for write
-        lfpShft(k:(end - t), ch, sn) = lfp(p1:p2, (rSw == segms(sn, 3)));%lfp phased with respect to stimulus moments
+        lfpShft(k:(end - t), :, sn) = lfpEx(p1:p2, rCh, segms(sn, 3));%resampled data phased with respect to synchro-event
     end
 end
+

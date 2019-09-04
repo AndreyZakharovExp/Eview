@@ -1,4 +1,5 @@
 function dataFlt = ZavRCfilt(data, fc, fsampl, filter_type)
+%dataFlt = ZavRCfilt(data, fc, fsampl, filter_type)
 %RC-filter. Only highpass
 %INPUT
 %data - input signal
@@ -50,7 +51,12 @@ else %lowpass %(strcmp(filter_type, 'low'))
     b(2) = b(1);
     a(2) = (1 - z) / (1 + z);
 end
-dataFlt = filter(b, a, data, [], 1);%filtering
+dataFlt = data;%memory preallocation
+for ch = 1:size(data, 2) %run over channels
+    for sw = 1:size(data, 3) %run over segments
+        dataFlt(:, ch, sw) = filter(b, a, data(:, ch, sw), [], 1);%filtering
+    end
+end
 
 
 % %===== short way with same result (slow) =====%
