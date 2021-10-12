@@ -21,15 +21,23 @@ function lfpShft = ZavSynchLFP(zavp, hd, segms, segmEdge, lfpEx, rCh, rawData, n
 %lfpShft - lfp phased with respect to stimulus moments
 %
 
+%first read for memory preallocation
 if rawData %raw data requested
-    segmEdge = round(segmEdge * zavp.rarStep);%left and right shifts from synchro-point (samples)
-    segms(:, 1) = round(segms(:, 1) * zavp.rarStep) + 1;%position of synchro-impuls (samples)
+    segmEdge = round(segmEdge * zavp.rarStep(1));%left and right shifts from synchro-point (samples)
+    segms(:, 1) = round(segms(:, 1) * zavp.rarStep(1)) + 1;%position of synchro-impuls (samples)
+    sn = 1;
+    p1 = (segms(sn, 1) + segmEdge(1)) * hd.si / 1e3;%start time (ms from record begin)
+    p2 = (segms(sn, 1) + segmEdge(2)) * hd.si / 1e3;%end time (ms from record begin)
+    lfpShft = ZavLoadData(zavp.file, hd, rCh(1), segms(sn, 3), p1, p2, nlxVer);
+    segmLen = length(lfpShft);%length of needed segments (samples)
 else %resampled data requested
+    segmEdge = round(segmEdge / (zavp.rarStep(1) * zavp.siS * 1e3));%left and right shifts from synchro-point (samples)
     segms(:, 1) = round(segms(:, 1)) + 1;%position of synchro-impuls (samples)
+    segmLen = diff(segmEdge) + 1;%length of needed segments (samples)
 end
-segmLen = diff(segmEdge) + 1;%length of needed segments (samples)
-
 lfpShft = zeros(segmLen, length(rCh), size(segms, 1));%lfp phased with respect to stimuli moments
+
+%final read data
 if rawData %read raw data
     for sn = 1:size(segms, 1) %run over segments
         p1 = (segms(sn, 1) + segmEdge(1)) * hd.si / 1e3;%start time (ms from record begin)

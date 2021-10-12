@@ -11,7 +11,7 @@ function dataFlt = ZavRCfilt(data, fc, fsampl, filter_type)
 %dataFlt - output filtered signal
 %
 
-%===== righ way (fast) =====%
+%===== righ way (fast calculation) =====%
 % Default to allpass if invalid type is selected
 b = [1, 0]; a = [1, 0];
 z = 1 / tan((2 * pi * fc / fsampl) / 2);
@@ -59,7 +59,7 @@ for ch = 1:size(data, 2) %run over channels
 end
 
 
-% %===== short way with same result (slow) =====%
+% %===== short way with same result (slow calculation) =====%
 % dataFlt = data;
 % RC = 1 / (2 * pi * fc);
 % alpha = RC / (RC + (1 / fsampl));
