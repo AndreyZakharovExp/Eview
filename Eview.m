@@ -22,7 +22,7 @@ function varargout = Eview(varargin)
 
 % Edit the above text to modify the response to help Eview
 
-% Last Modified by GUIDE v2.5 21-May-2021 18:08:53
+% Last Modified by GUIDE v2.5 07-Feb-2023 18:39:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -72,11 +72,7 @@ function varargout = Eview_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 evi = handles.Eview;%main form handle
-% handles.LFPscb = annotation('textarrow', 'Position', [0.025, 0.15 0, 0.1], 'LineWidth', 5, 'Units', 'normalized', 'TextRotation', 90, 'HeadStyle', 'none',...
-%     'String', '0 \muV', 'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left');%LFP-scale bar
-% handles.MUAscb = annotation('textarrow', 'Position', [0.02, 0.35 0, 0.1], 'LineWidth', 5, 'Units', 'normalized', 'TextRotation', 90, 'HeadStyle', 'none',...
-%     'String', '0 spikes', 'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left');%MUA-scale bar
-setappdata(evi, 'dataCurs', []);
+setappdata(evi, 'dataCurs', []);%data cursor (information about signal)
 
 % handles.CSD_clb = colorbar('peer', handles.LFP_ax, 'Location', 'manual', 'Units', 'normalized', ... %CSD-colorbar
 %     'Position', [0.01, 0.71, 0.01, 0.17], 'YAxisLocation', 'left', 'FontSize', 6, 'YTickLabel', []);%CSD-colorbar
@@ -101,7 +97,50 @@ set(manDetPrmH, 'Data', {'Channel', 1, 'main channel for manual detection'; ... 
                          'Search range', 15, 'range for local extremum search'; ... extremum search range
                          'SubChannel', 2, 'subchannel for additional analysis'; ... minor channel 
                          'SubPolarity', 1, 'polarity on subchannel, 1-min, 0-max' ... polarity minor channel 
-    })%set manual detection parameters
+    }) %set manual detection parameters
+
+%creat color list
+clrList = {[0, 0, 0], 'black'; ...
+           [0, 0, 1], 'blue'; ...
+           [1, 0, 0], 'red'; ...
+           [0, 1, 0], 'green'; ...
+           [0, 1, 1], 'cyan'; ...
+           [1, 0, 1], 'magenta'; ...
+           [1, 1, 0], 'yellow'; ...
+           [1, 1, 1], 'white'; ...
+           [0.1, 0.1, 0.1], '90%-black'; ...
+           [0.3, 0.3, 0.3], '70%-black'; ...
+           [0.5, 0.5, 0.5], '50%-black'; ...
+           [0.7, 0.7, 0.7], '30%-black'; ...
+           [0.9, 0.9, 0.9], '10%-black'; ...
+           [0.6, 0, 0.8], 'purple'; ...
+           [0, 0.7, 0.2], 'dark green'; ...
+           [1, 0.4, 0], 'orange'; ...
+           [1, 0.6, 0.8], 'pink'; ...
+           [0.4, 0.2, 0.2], 'brown'; ...
+           [1, 0.6, 0.2], 'peach'; ...
+           [1, 0.8, 0], 'sandy'; ...
+           [0.6, 0, 0], 'ruby'; ...
+        };
+setappdata(evi, 'clrList', clrList) %color list
+
+%set background color
+set(handles.PSegm, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.NSegm, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.SwpNTxt, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.StepSwpTxt, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.CutSpnt, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.CutManual, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.AverLenTxt, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.Average, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.WinAvr, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.BefSynchTxt1, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.BefSynchTxt2, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.ShowMarkers, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.SelectAllCh, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.InvertSelection, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.SelectChann, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
+set(handles.AcceptManDet, 'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%
 
 guidata(hObject, handles);%update handles structure
 
@@ -165,10 +204,10 @@ z = find(flNm == '_', 1, 'first');
 if exist([pth, flNm(1:z), 'events.xlsx'], 'file')
     [~, ~, eventsTags] = xlsread([pth, flNm(1:z), 'events.xlsx']);%load manual protocol
     for t = 2:length(eventsTags) %run over events
-        eventsTags{t} = ((eventsTags{t} * 3600 * 24) - hd.recTime(1)) * 1e3;%convert to ms from current record begin
+        eventsTags{t, 1} = ((eventsTags{t, 1} * 3600 * 24) - hd.recTime(1)) * 1e3;%convert to ms from current record begin
     end
 else
-    eventsTags = {};
+    eventsTags = {};%no events data
 end
 %= end of (load events from xls) =%
 
@@ -194,7 +233,7 @@ set(handles.SaveBursts, 'UserData', 0)%set flag of bursts saved
 %= fill table of channel selector =%
 chTabData = get(handles.ChannSelector, 'Data');%channel selection table
 if isempty(horzcat(chTabData{:, 1})) %first initiation
-    chTabData = cell(hd.nADCNumChannels, 2);%create channels-table data
+    chTabData = cell(hd.nADCNumChannels, 5);%create channels-table data
     
     %creat channel groups with default settings 
     chanSettingGrp(1:hd.nADCNumChannels) = struct('grpName', [], ... name of channels group
@@ -205,10 +244,12 @@ if isempty(horzcat(chTabData{:, 1})) %first initiation
                                                   'recovDC', false, ... if recovery DC signal from psedoDC
                                                   'rawSignal', false, ... if raw signal
                                                   'comRef', false, ... if common reference
+                                                  'comZero', false, ... if common zero
                                                   'dcShift', false, ... if compensate DC
                                                   'invertLFP', false, ... if invert LFP
                                                   'pltCSDmap', false, ... if plot CSD map
                                                   'pltSpkMap', false, ... if plot spikes frequency map
+                                                  'contur', false, ... if draw contour lines for CSD-map or MUA-map
                                                   'pltLFP', true, ... if plot LFP traces
                                                   'pltMUA', true, ... if plot MUA bars
                                                   'pltMUAfreq', false, ... if plot MUA-frequency traces
@@ -217,9 +258,14 @@ if isempty(horzcat(chTabData{:, 1})) %first initiation
                                                   'muaBin', 5, ... bin step for MUA frequency (ms)
                                                   'precisF', 1, ... precision factor (for MUA frequency calculation)
                                                   'muaScale', 1, ... MUA-scale (spikes/ms)
-                                                  'realsernum', 0 ... actual serial number of the channel on a graph (number of line)
+                                                  'realsernum', 0, ... actual serial number of the channel on a graph (number of line)
+                                                  'lfpLnClr', 1, ... LFP lines color (number in clrList array)
+                                                  'muaBarClr', 3, ... MUA bars color (number in clrList array)
+                                                  'muaLnClr', 2, ... MUA lines color (number in clrList array)
+                                                  'changed', true ... was changed
                                                   );
     for ch = 1:hd.nADCNumChannels %run over channels
+        chTabData{ch, 2} = false;%channel deselected
         chTabData{ch, 3} = false;%channel deselected
         chanSettingGrp(ch).grpName = ch;%initially each channel is in its own group
         chTabData{ch, 4} = chanSettingGrp(ch).grpName;%copy group name
@@ -231,7 +277,7 @@ else %get previous settings
         chanSettingGrp((hd.nADCNumChannels + 1):end) = [];%delete bottom part of settings list
     else %current file contain more channels (creat setting for additional channels)
         z = size(chTabData, 1);%number of last previous channel
-        chTabData((z + 1):hd.nADCNumChannels, :) = cell((hd.nADCNumChannels - z), 4);%add cells
+        chTabData((z + 1):hd.nADCNumChannels, :) = cell((hd.nADCNumChannels - z), 5);%add cells
         chanSettingGrp((z + 1):hd.nADCNumChannels) = struct('grpName', [], ... name of channels group
                                                   'lowCut', false, ... if od lowcut filtering
                                                   'lowCutFrq', 0.1, ... lowcut frequency
@@ -240,10 +286,12 @@ else %get previous settings
                                                   'recovDC', false, ... if recovery DC signal from psedoDC
                                                   'rawSignal', false, ... if raw signal
                                                   'comRef', false, ... if common reference
+                                                  'comZero', false, ... if common zero
                                                   'dcShift', false, ... if compensate DC
                                                   'invertLFP', false, ... if invert LFP
                                                   'pltCSDmap', false, ... if plot CSD map
                                                   'pltSpkMap', false, ... if plot spikes frequency map
+                                                  'contur', false, ... if draw contour lines for CSD-map or MUA-map
                                                   'pltLFP', true, ... if plot LFP traces
                                                   'pltMUA', true, ... if plot MUA bars
                                                   'pltMUAfreq', false, ... if plot MUA-frequency traces
@@ -252,10 +300,15 @@ else %get previous settings
                                                   'muaBin', 5, ... bin step for MUA frequency (ms)
                                                   'precisF', 1, ... precision factor (for MUA frequency calculation)
                                                   'muaScale', 1, ... MUA-scale (spikes/ms)
-                                                  'realsernum', 0 ... actual serial number of the channel on a graph (number of line)
+                                                  'realsernum', 0, ... actual serial number of the channel on a graph (number of line)
+                                                  'lfpLnClr', 1, ... LFP lines color (number in clrList array)
+                                                  'muaBarClr', 3, ... MUA bars color (number in clrList array)
+                                                  'muaLnClr', 2, ... MUA lines color (number in clrList array)
+                                                  'changed', true ... was changed
                                                   );%add structures
         m = max(horzcat(chanSettingGrp(1:z).grpName)) + 1;%new groups for each new channel
         for ch = (z + 1):hd.nADCNumChannels %run over channels
+            chTabData{ch, 2} = false;%channel deselected
             chTabData{ch, 3} = false;%channel deselected
             chanSettingGrp(ch).grpName = m;%each new channel is in its own group
             chTabData{ch, 4} = chanSettingGrp(ch).grpName;%copy group name
@@ -271,11 +324,11 @@ end
 if isfield(hd, 'recChNames') %channel names exist
     for ch = 1:hd.nADCNumChannels %run over channels
         chTabData{ch, 1} = hd.recChNames{ch, 1};%name of channel
-        chTabData{ch, 2} = '';%altername of channel
+        chTabData{ch, 5} = '';%altername of channel
     end
     if (size(hd.recChNames, 2) > 1) %altername was signed
         for ch = 1:hd.nADCNumChannels %run over channels
-            chTabData{ch, 2} = hd.recChNames{ch, 2};%name of channel
+            chTabData{ch, 5} = hd.recChNames{ch, 2};%name of channel
         end
     end
 else %channel names not exist
@@ -284,14 +337,17 @@ else %channel names not exist
         chTabData{ch, 1} = num2str(ch);%name of channel
     end
 end
-if ~any(vertcat(chTabData{:, 3})) %no one channel selection
-    chTabData{1, 3} = true;%select only first channel
+if ~any(vertcat(chTabData{:, 2})) %no one channel selection
+    chTabData{1, 2} = true;%select only first channel
 end
 set(handles.ChannSelector, 'Data', chTabData)%set table data
 %= end of (fill table of channel selector) =%
 
 %= LFP/spikes =%
 lfp = double(lfp);
+if ~exist('spks', 'var') %no spikes
+    spks(1:hd.nADCNumChannels, 1:hd.lActualEpisodes) = struct('tStamp', [], 'ampl', [], 'shape', []);%moments of spikes appearance (ms)
+end
 spksOrig = spks;%copy of spikes
 for sw = 1:hd.lActualEpisodes
     for ch = 1:hd.nADCNumChannels
@@ -313,15 +369,17 @@ for sw = 1:hd.lActualEpisodes
 end
 %= end of (LFP/spikes) =%
 
-if iscell(zavp.file)
+if iscell(zavp.file) %merged file (many source recordations)
     lfp = RemovNaN(lfp);%exclude NaN and Inf with interpolation
 end
 lfpOrig = lfp;%original LFP
 
+trnsfrmlist(1:length(chanSettingGrp)) = struct('list', []);%blank signal transformations list
 %= LFP filtration =%
 for ch = 1:length(chanSettingGrp) %run over channels (looking for the group)
     if (chanSettingGrp(ch).recovDC) %recovery DC from pseudoDC
         lfp(:, ch, :) = RecovDCfromPseudo(lfp(:, ch, :), zavp.dwnSmplFrq);%recovery
+        trnsfrmlist(ch).list{end + 1} = 'recov DC from pseudo DC';%add line
     end
     if (chanSettingGrp(ch).lowCut && (chanSettingGrp(ch).lowCutFrq < (zavp.dwnSmplFrq / 2))) %lowcut filtration
         if (chanSettingGrp(ch).lowCutFrq < 2) %small cutting frequency
@@ -329,6 +387,7 @@ for ch = 1:length(chanSettingGrp) %run over channels (looking for the group)
         else %quite large cutting frequency
             lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'high', chanSettingGrp(ch).lowCutFrq, 2);%lowcut
         end
+        trnsfrmlist(ch).list{end + 1} = ['lowcut filtration (', num2str(chanSettingGrp(ch).lowCutFrq), ' Hz)'];%add line
     end
     if (chanSettingGrp(ch).highCut && (chanSettingGrp(ch).highCutFrq < (zavp.dwnSmplFrq / 2))) %highcut filtration
         if (chanSettingGrp(ch).highCutFrq < 2) %small cutting frequency
@@ -336,10 +395,12 @@ for ch = 1:length(chanSettingGrp) %run over channels (looking for the group)
         else
             lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'low', chanSettingGrp(ch).highCutFrq, 2);%highcut
         end
+        trnsfrmlist(ch).list{end + 1} = ['highcut filtration (', num2str(chanSettingGrp(ch).highCutFrq), ' Hz)'];%add line
     end
     
     if (chanSettingGrp(ch).invertLFP) %if invert LFP
         lfp(:, ch, :) = -1 * lfp(:, ch, :);%invert LFP
+        trnsfrmlist(ch).list{end + 1} = 'inversion';%add line
     end
 end
 %= end of (LFP filtration) =%
@@ -351,18 +412,32 @@ lfpLn = zeros(hd.nADCNumChannels, 1);%LFP line handles
 spkBr = zeros(hd.nADCNumChannels, 1);%spike bar handles
 spkDnLn = zeros(hd.nADCNumChannels, 1);%spike density line handles
 clrMapH = zeros(hd.nADCNumChannels, 1);%colormap handles (CSD or MUA)
-for ch = 1:hd.nADCNumChannels %run over channels
+conturH = zeros(hd.nADCNumChannels, 1);%contour handles (CSD or MUA)
+voltMuaScal = getappdata(evi, 'voltMuaScal');%LFP scale bar handles
+for t = 1:length(voltMuaScal) %run over scale bars
+    delete(voltMuaScal(t));%delete object
+end
+voltMuaScal = zeros(hd.nADCNumChannels, 1);%LFP scale bar handles
+
+for ch = 1:hd.nADCNumChannels %run over color maps (same number as channels)
     subplot(lfp_ax);%set lfp_ax as a parent for next plot
     clrMapH(ch) = imagesc(0, 0, 1);%colormap handles (CSD or MUA)
     set(clrMapH(ch), 'Visible', 'off', 'Tag', 'clrMap')
+    subplot(lfp_ax);%set lfp_ax as a parent for next plot
+    [~, conturH(ch)] = contour(1:2, 1:2, randn(2, 2));%contour handles (CSD or MUA)
+    set(conturH(ch), 'Visible', 'off', 'Tag', 'contur')
 end
-for ch = 1:hd.nADCNumChannels %run over channels
+for ch = 1:hd.nADCNumChannels %run over lines (same number as channels)
     lfpLn(ch) = plot(lfp_ax, NaN, NaN, 'k', 'LineWidth', 1);%LFP line handles
     set(lfpLn(ch), 'ButtonDownFcn', {@Line_ButtonDownFcn, handles}, 'Visible', 'off', 'Tag', 'lfpLn')%reaction on mouse-click
     spkBr(ch) = plot(lfp_ax, NaN, NaN, 'r', 'LineWidth', 1.5);%spike bar handles
     set(spkBr(ch), 'Visible', 'off')
     spkDnLn(ch) = plot(lfp_ax, NaN, NaN, 'LineWidth', 1);%spike density line handles
     set(spkDnLn(ch), 'ButtonDownFcn', {@Line_ButtonDownFcn, handles}, 'Visible', 'off')%reaction on mouse-click
+
+	voltMuaScal(ch) = annotation('textarrow', 'Position', [0.99, 0.15 0, 0.1], 'LineWidth', 3, 'Units', 'normalized', ...
+                              'TextRotation', 90, 'HeadStyle', 'none', 'String', '', 'VerticalAlignment', 'middle', ...
+                              'HorizontalAlignment', 'left', 'Visible', 'off', 'FontSize', 8);%LFP and MUA scale bar handles (string format '2mV + 3mua/ms')
 end
 %= end of (line handles) =%
 
@@ -380,32 +455,37 @@ setappdata(evi, 'eventsTags', eventsTags) %manually entered events
 setappdata(evi, 'brst', brst) %bursts
 setappdata(evi, 'selectedBrst', []) %selected burst
 setappdata(evi, 'nlxVer', nlxVer) %Neuralynx cheetah version
-setappdata(evi, 'chanSettingGrp', chanSettingGrp);%save channels group setting
-setappdata(evi, 'manlDet', []);%manually detected events
-setappdata(evi, 'lfpLn', lfpLn);%LFP line handles
-setappdata(evi, 'spkLn', spkBr);%spke bar handles
-setappdata(evi, 'spkDnLn', spkDnLn);%spike density line handles
-setappdata(evi, 'clrMapH', clrMapH);%colormap handles (CSD or MUA)
-setappdata(evi, 'dltGrphObj', []);%deletable objects
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
+setappdata(evi, 'manlDet', []) %manually detected events
+setappdata(evi, 'lfpLn', lfpLn) %LFP line handles
+setappdata(evi, 'spkLn', spkBr) %spke bar handles
+setappdata(evi, 'spkDnLn', spkDnLn) %spike density line handles
+setappdata(evi, 'clrMapH', clrMapH) %colormap handles (CSD or MUA)
+setappdata(evi, 'conturH', conturH) %contour handles (CSD or MUA)
+setappdata(evi, 'dltGrphObj', []) %deletable objects
+setappdata(evi, 'trnsfrmlist', trnsfrmlist) %signal transformations list
+setappdata(evi, 'voltMuaScal', voltMuaScal) %LFP scale bar handles
 
 set(handles.CutManual, 'Value', 0);%switch off manually detected events
 set(handles.CutManual, 'String', 'mdet ');
 %= end of (save application data) =%
 
 extSegms = zeros(numel(vertcat(zavp.realStim(:).r)), 4);%preallocation of memory for stimuli moments
-z = 1;%through counter of stimuli
-for sw = 1:hd.lActualEpisodes %run over sweeps
-    for t = 1:numel(zavp.realStim(sw).r) %run over synchro-events
-        extSegms(z, 1) = zavp.realStim(sw).r(t) / zavp.rarStep(1);%position of synchro-event (ms from record begin (from 0))
-        %extSegms(z, 1) = segms(z, 1) + sepOnsetPeak(15, sw).r(z, 1); disp(' shifted start point ') %shift to SEP onset
-        extSegms(z, 2) = zavp.stimCh;%number of channel where syncro-event was detected
-        extSegms(z, 3) = sw;%number of sweep where syncro-event was detected
-        extSegms(z, 4) = t;%number of stimulus (in matrix zavp.realStim) or number of trough in brst matrix
-        z = z + 1;%through counter of stimuli
+if (size(extSegms, 1) > 0)
+    z = 1;%through counter of stimuli
+    for sw = 1:hd.lActualEpisodes %run over sweeps
+        for t = 1:numel(zavp.realStim(sw).r) %run over synchro-events
+            extSegms(z, 1) = zavp.realStim(sw).r(t) * zavp.siS * 1e3;%position of synchro-event (ms from record begin (from 0))
+            %extSegms(z, 1) = segms(z, 1) + sepOnsetPeak(15, sw).r(z, 1); disp(' shifted start point ') %shift to SEP onset
+            extSegms(z, 2) = zavp.stimCh;%number of channel where syncro-event was detected
+            extSegms(z, 3) = sw;%number of sweep where syncro-event was detected
+            extSegms(z, 4) = t;%number of stimulus (in matrix zavp.realStim) or number of trough in brst matrix
+            z = z + 1;%through counter of stimuli
+        end
     end
+    extSegms(z:end, :) = [];%delete excess
 end
-extSegms(z:end, :) = [];%delete excess
-setappdata(evi, 'extSegms', extSegms);%external stimulus sent during experiment
+setappdata(evi, 'extSegms', extSegms) %external stimulus sent during experiment
     
 CutSpnt_Callback([], [], handles) %creat segment and plot
 
@@ -421,6 +501,15 @@ function BefStim_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+if (-str2double(get(handles.BefStim, 'String')) > str2double(get(handles.AftStim, 'String')))
+    set(handles.BefStim, 'String', num2str(-str2double(get(handles.AftStim, 'String')) + 1))
+end
+evi = handles.Eview;%handle of the application window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -429,6 +518,15 @@ function AftStim_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+if (-str2double(get(handles.BefStim, 'String')) > str2double(get(handles.AftStim, 'String')))
+    set(handles.AftStim, 'String', num2str(-str2double(get(handles.BefStim, 'String')) + 1))
+end
+evi = handles.Eview;%handle of the application window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -442,11 +540,11 @@ function PNSegm_Callback(hObject, eventdata, handles)
 evi = handles.Eview;%handle of the application window
 crSeg = handles.CurrSegm;
 segms = getappdata(evi, 'segms');%number of signal segments
-cs = str2double(get(crSeg, 'String'));%current segment
+cs0 = str2double(get(crSeg, 'String'));%current segment
 if isequal(hObject, handles.NSegm)
-    cs = cs + str2double(get(handles.Step, 'String'));
+    cs = cs0 + str2double(get(handles.Step, 'String'));
 elseif isequal(hObject, handles.PSegm)
-    cs = cs - str2double(get(handles.Step, 'String'));
+    cs = cs0 - str2double(get(handles.Step, 'String'));
 end
 if (cs < 1)
     cs = 1;
@@ -454,7 +552,14 @@ elseif (cs > size(segms, 1))
     cs = size(segms, 1);
 end
 set(crSeg, 'String', num2str(cs))
-PlotAll(handles);%plot with new parameters
+if (cs ~= cs0)
+    chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+    for ch = 1:length(chanSettingGrp) %run over channels
+        chanSettingGrp(ch).changed = true;%redraw all lines
+    end
+    setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
+    PlotAll(handles);%plot with new parameters
+end
 
 
 
@@ -463,6 +568,12 @@ function CurrSegm_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+evi = handles.Eview;%handle of the application window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -474,7 +585,7 @@ function CutSpnt_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 %
 evi = handles.Eview;%handle of the application window
-hd = getappdata(evi, 'hd');
+hd = getappdata(evi, 'hd');%file header
 lfp = getappdata(evi, 'lfp');
 zavp = getappdata(evi, 'zavp');
 manlDet = getappdata(evi, 'manlDet');%manually detected events
@@ -490,13 +601,17 @@ if (~isempty(manlDet) && ~get(handles.CutManual, 'Value')) %try save manlDet
         pth = getappdata(evi, 'pth');%directory
         flNm = getappdata(evi, 'flNm');%filename
 
-        z = 0;%file number
-        while exist([pth, flNm, '_mdet', num2str(z), '.mat'], 'file') %file exit
-            z = z + 1;%next file (with other events)
+        if exist([pth, flNm, '_mdet.mat'], 'file')
+            z = 0;%file number
+            while exist([pth, flNm, '_mdet', num2str(z), '.mat'], 'file') %file exit
+                z = z + 1;%next file (with other events)
+            end
+        else
+            z = [];
         end
         save([pth, flNm, '_mdet', num2str(z), '.mat'], 'manlDet') %save manually detected events
     end
-    setappdata(evi, 'manlDet', []);%manually detected events
+    setappdata(evi, 'manlDet', []) %manually detected events
     set(handles.CutManual, 'String', 'mdet');%number of manually detected events
 end
 if (isempty(manlDet) && get(handles.CutManual, 'Value')) %try open manlDet
@@ -509,7 +624,7 @@ if (isempty(manlDet) && get(handles.CutManual, 'Value')) %try open manlDet
             varInMatFile = who(matfile([pth, flNm]));%variable in the choosed file
             if ismember('manlDet', varInMatFile)
                 load([pth, flNm], 'manlDet');%load manually detected events
-                setappdata(evi, 'manlDet', manlDet);%manually detected events
+                setappdata(evi, 'manlDet', manlDet) %manually detected events
                 set(handles.CutManual, 'String', ['mdet ', num2str(length(manlDet))]);
             else
                 set(handles.CutManual, 'Value', 0);%switch off manually detected events
@@ -536,15 +651,16 @@ if ((get(handles.CutSpnt, 'Value') || isempty(extSegms)) && ~(get(handles.CutMan
     else
         tW = str2double(aftStimStr);%time window (ms)
     end
+    recLenMS = (1e3 * diff(hd.recTime));%length of recordation (ms)
     if (hd.lActualEpisodes <= 1) %single sweeps (gap-free mode)
-        segms = zeros(floor(size(lfp, 1) / tW), 4);%tW-seconds segments
+        segms = zeros(floor(recLenMS / tW), 4);%tW-seconds segments
         z = 1;
         segms(z, 1) = 0;%position of synchro-event (ms)
         segms(z, 2) = NaN;%number of channel where syncro-event was detected
         segms(z, 3) = 1;%number of sweep where syncro-event was detected
         segms(z, 4) = -1;%number of stimulus (in matrix zavp.realStim) or number of trough in brst matrix
         z = 2;
-        while ((segms(z - 1, 1) + tW) < size(lfp, 1))
+        while ((segms(z - 1, 1) + tW) < recLenMS) %end of recordation is reached
             segms(z, 1) = segms(z - 1, 1) + tW;%position of synchro-event (ms)
             segms(z, 2) = NaN;%number of channel where syncro-event was detected
             segms(z, 3) = 1;%number of sweep where syncro-event was detected
@@ -581,7 +697,7 @@ for t = 1:size(segms, 1) %run over segments
     if isfield(hd, 'sweepStartInPts') %sweep start exist
         segms(t, 5) = hd.sweepStartInPts(segms(t, 3)) * hd.si / 1e6;%sweep start (seconds from beginning of recording)
     end
-    timeStr(t, :) = MoscowTime(hd.recTime(1) + segms(t, 5) + (segms(t, 1) * 1e-3));%"Moscow" time of the segment begin (part of day)
+    timeStr(t, :) = MoscowTime(hd.recTime(1) + segms(t, 5) + (segms(t, 1) / 1e3));%"Moscow" time of the segment begin (part of day)
 end
 
 %= save application data =%
@@ -595,6 +711,11 @@ if (isnan(str2double(get(handles.BefStim, 'String'))) || isnan(str2double(get(ha
     set(handles.AftStim, 'String', num2str(tW))%length of view window
 end
 
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -604,11 +725,11 @@ evi = handles.Eview;%handle of the application window
 lfp_ax = handles.LFP_ax;%LFP axis handle
 
 dataCurs = getappdata(handles.Eview, 'dataCurs');%data cursors
-for t = 1:length(dataCurs)
+for t = 1:length(dataCurs) %run over data cursors
     delete(dataCurs(t).t);%delete data cursor
     delete(dataCurs(t).l);%delete line
 end
-setappdata(handles.Eview, 'dataCurs', []);%data cursors
+setappdata(handles.Eview, 'dataCurs', []) %data cursors
 
 %= load application data =%
 % pth = getappdata(evi, 'pth');%directory
@@ -617,7 +738,7 @@ lfp = getappdata(evi, 'lfp');%LFP
 spks = getappdata(evi, 'spks');%separated spikes
 % spksOrig = getappdata(evi, 'spksOrig');%original spikes
 lfpVar = getappdata(evi, 'lfpVar');%LFP variance
-hd = getappdata(evi, 'hd');%header
+hd = getappdata(evi, 'hd');%file header
 zavp = getappdata(evi, 'zavp');%additional parameters
 eventsTags = getappdata(evi, 'eventsTags');%manually entered events
 brst = getappdata(evi, 'brst');%bursts
@@ -627,11 +748,16 @@ chanSettingGrp = getappdata(evi, 'chanSettingGrp');%save channels group setting
 chTabData = get(handles.ChannSelector, 'Data');%channels selector table content
 segms = getappdata(evi, 'segms');%segments of recordation
 timeStr = getappdata(evi, 'timeStr');%automatically created time tags
+% trnsfrmlist = getappdata(evi, 'trnsfrmlist');%signal transformations list
 
 lfpLn = getappdata(evi, 'lfpLn');%LFP line handles
 spkBr = getappdata(evi, 'spkLn');%spke bar handles
 spkDnLn = getappdata(evi, 'spkDnLn');%spike density line handles
 clrMapH = getappdata(evi, 'clrMapH');%colormap handles (CSD or MUA)
+conturH = getappdata(evi, 'conturH');%contour handles (CSD or MUA)
+clrList = getappdata(evi, 'clrList');%color list
+voltMuaScal = getappdata(evi, 'voltMuaScal');%LFP scale bar handles
+allSwLFP = [];%all sweeps lfp
 
 if isfield(zavp, 'chOrd')
     lfp = lfp(:, zavp.chOrd, :);
@@ -641,6 +767,18 @@ end
 
 segmEdge = [-str2double(get(handles.BefStim, 'String')), ... left shifts from synchro-point (ms)
              str2double(get(handles.AftStim, 'String'))];%right shifts from synchro-point (ms)
+%= time axis parameters =%
+if (diff(segmEdge) > 300e3) %minutes
+    timeScalCoeff = 60e3;%time coefficient
+    timeUnit = 'min';%units
+elseif ((diff(segmEdge) > 5e3) && (diff(segmEdge) <= 300e3)) %seconds
+    timeScalCoeff = 1e3;%time coefficient
+    timeUnit = 's';%units
+else %milliseconds
+    timeScalCoeff = 1;%time coefficient
+    timeUnit = 'ms';%units
+end
+%= end of (time axis parameters) =%
 
 if (get(handles.Average, 'Value') || get(handles.WinAvr, 'Value')) %average segments
     z = str2double(get(handles.CurrSegm, 'String'));%first segment to be averaged
@@ -666,326 +804,336 @@ for t = 1:length(dltGrphObj) %run over object to be deleted
     delete(dltGrphObj(t));%delet object
 end
 dltGrphObj = [];%no objects to be deleted
-setappdata(evi, 'dltGrphObj', []);
+setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
 
-for t = 1:length(lfpLn) %run over objects
-    set(lfpLn(t), 'Visible', 'off')%inivisible now
-end
-for t = 1:length(spkBr) %run over objects
-    set(spkBr(t), 'Visible', 'off')%inivisible now
-end
-for t = 1:length(spkDnLn) %run over objects
-    set(spkDnLn(t), 'Visible', 'off')%inivisible now
-end
-for t = 1:length(clrMapH) %run over objects
-    set(clrMapH(t), 'Visible', 'off')%inivisible now
-end
-
-setappdata(evi, 'dFrmH', []);%drag frame handle
-setappdata(evi, 'bgnXY', []);%begin point of rectangle draw
-setappdata(evi, 'endXY', []);%end point of rectangle draw
+setappdata(evi, 'dFrmH', []) %drag frame handle
+setappdata(evi, 'bgnXY', []) %begin point of rectangle draw
+setappdata(evi, 'endXY', []) %end point of rectangle draw
 chnlStr = cell(0);%vertical axis labels (channels)
+
+drwnChNum = sum(horzcat(chTabData{:, 2}));%number of drawn channels
+y_lmt = [-0.05, drwnChNum + 1.05];%vertical limits
+for ch = 1:hd.nADCNumChannels %run over all channels
+    set(voltMuaScal(ch), 'Visible', 'off', 'String', '')%inivisible now
+end
+axPos = get(lfp_ax, 'Position');%axis position
+sclBrLen = axPos(4) / diff(y_lmt);%scale bar normalized length
 
 %= run over channel groups and plot traces individual settings =%
 unqChnlGrp = unique(horzcat(chTabData{:, 4}));%names of unique groups
-initLvl = 0;%initial drawing level
-for z = 1:length(chanSettingGrp) %run over all channels
-    chanSettingGrp(z).realsernum = 0;%actual serial number of the channel on a graph
+for ch = 1:length(chanSettingGrp) %run over all channels
+    chanSettingGrp(ch).realsernum = 0;%actual serial number of the channel on a graph
 end
 realsernum = 1;%actual serial number of the first visible channel
 for cg = unqChnlGrp %run over unique groups
     jj = horzcat(chanSettingGrp(:).grpName);%all groups
     cgch = find(jj == cg);%current group channels
-    rCh = find(horzcat(chTabData{:, 3}));%all selected channels
+    rCh = find(horzcat(chTabData{:, 2}));%all selected channels
     rCh = intersect(rCh, cgch);%number of visible (selected) channels of current group rCh array
-    for z = 1:length(rCh) %run over selected channels of the group
-        chanSettingGrp(rCh(z)).realsernum = realsernum;%actual serial number of the channel on a graph
+    for ch = 1:numel(rCh) %run over selected channels of the group
+        chanSettingGrp(rCh(ch)).realsernum = realsernum;%actual serial number of the channel on a graph
         realsernum = realsernum + 1;%actual serial number of next visible channel
     end
     
-    if ~isempty(rCh) %any channels was selected
-    rawData = chanSettingGrp(rCh(1)).rawSignal;%load raw data if true
-    
-    %= timevector for raw and resampled signals =%
-    if rawData %raw data requested
-        prm.Fs = 1 / zavp.siS;%sampling frequency for raw data
-    else %resampled data requested
-        prm.Fs = zavp.dwnSmplFrq;%sampling frequency for rare data
-    end
-    tm = segmEdge(1):(1e3 / prm.Fs):segmEdge(2);%time matrix for raw or downsampled data (ms)
-    if ((segmEdge(2) - tm(end)) >= ((1e3 / prm.Fs) / 2))
-        tm = [tm, tm(end) + (1e3 / prm.Fs)];
-    end
-    %= end of (timevector for raw and resampled signals) =%
-    
-
-    %= common reference (step 1) =%
-    if chanSettingGrp(rCh(1)).comRef %common reference subtraction
-        tmpChnl = cgch;%requested channels
-    else %without common reference subtraction
-        tmpChnl = rCh;%requested channels
-    end
-    if rawData %raw data is requested
-        fLFP = ZavSynchLFP(zavp, hd, segms(sn, :), segmEdge, lfp, tmpChnl, rawData, nlxVer);%lfp phased with respect to stimulus moments
-    else %resampled data is requested
-        fLFP = lfp(:, tmpChnl, :);%no filters
-    end
-    %= end of (common reference (step 1)) =%
-    
-        
-    %= LFP-segmentation =%
-    if rawData %raw data is requested
-        whtLFP = fLFP;%lfp phased with respect to stimulus moments
-    else %resampled data is requested
-        whtLFP = ZavSynchLFP(zavp, hd, segms(sn, :), segmEdge, fLFP, 1:size(fLFP, 2), rawData, nlxVer);%lfp phased with respect to stimulus moments
-    end
-    %= end of (LFP-segmentation) =%
-    
-
-    %= DC-shift compensation =%
-    if chanSettingGrp(rCh(1)).dcShift %DC compensation
-        ii = 1:min(20, size(whtLFP, 1));%time near segment begin
-        %ii = (tm > -1e1) & (tm < 1e1);%time near synchro-event
-        ajj = median(whtLFP(ii, :, :), 1);%base-level
-        %ajj = median(whtLFP(:, :, :), 1);%base-level
-        whtLFP = whtLFP - repmat(ajj, [size(whtLFP, 1), 1, 1]);%subtract DC component
-    end
-    %= end of (DC-shift compensation) =%
-
-    %= common reference (step 2) =%
-    if chanSettingGrp(rCh(1)).comRef %common reference subtraction
-        ii = 1:min(20, size(whtLFP, 1));%time near segment begin
-        %ii = (tm > -1e1) & (tm < 1e1);%time near synchro-event
-        ajj = median(whtLFP(ii, :, :), 1);%base-level
-        wLFPcomm = mean(whtLFP - repmat(ajj, [size(whtLFP, 1), 1, 1]), 2);%common reference with adduction to zero-level of each channel in a group
-        [~, irch] = intersect(cgch, rCh);%number of selected (visible) channel of the group
-        whtLFP = whtLFP(:, irch, :) - repmat(wLFPcomm, [1, length(rCh), 1]);%subtract common reference
-    end
-    allSwLFP = whtLFP;%all sweeps lfp
-    whtLFP = mean(whtLFP, 3);%average by segments (after transformations)
-    %= end of (common reference (step 2)) =%
-    
-
-    %= time axis parameters =%
-    if (diff(segmEdge) > 300e3) %minutes
-        timeScalCoeff = 60e3;%time coefficient
-        timeUnit = 'min';%units
-    elseif ((diff(segmEdge) > 5e3) && (diff(segmEdge) <= 300e3)) %seconds
-        timeScalCoeff = 1e3;%time coefficient
-        timeUnit = 's';%units
-    else %milliseconds
-        timeScalCoeff = 1;%time coefficient
-        timeUnit = 'ms';%units
-    end
-    %= end of (time axis parameters) =%
-    
-    
-    %= drawing step (plot acceleration) =%
-    rarStep = 1;% + floor(size(whtLFP, 1) / 10e3);%plot with step
-    if (rarStep > 1)
-        ajj = whtLFP;%copy of LFP segment
-        whtLFP = zeros(length(resample(ajj(:, 1), 1, rarStep)), size(ajj, 2));
-        for t = 1:size(whtLFP, 2) %run over channels
-            whtLFP(:, t) = resample(ajj(:, t), 1, rarStep);%downsampled LFP
-        end
-        ajj = allSwLFP;%copy of LFP segment
-        allSwLFP = zeros(length(resample(ajj(:, 1, 1), 1, rarStep)), size(ajj, 2), size(ajj, 3));
-        for z = 1:size(ajj, 3) %run over segments
-            for t = 1:size(allSwLFP, 2) %run over channels
-                allSwLFP(:, t, z) = resample(ajj(:, t, z), 1, rarStep);%downsampled LFP
+    if (chanSettingGrp(cgch(1)).changed) %changed group
+        for ch = 1:hd.nADCNumChannels %run over all channels
+            userdata = get(lfpLn(ch), 'UserData');%{dCoeff, ch, timeScalCoeff, initLvl, rCh(ch)});
+            if (~isempty(userdata) && ismember(userdata{5}, cgch)) %channel of the changed group
+                set(lfpLn(ch), 'Visible', 'off')%inivisible now
+                set(spkBr(ch), 'Visible', 'off')%inivisible now
+                set(spkDnLn(ch), 'Visible', 'off')%inivisible now
+                set(clrMapH(ch), 'Visible', 'off')%inivisible now
+                set(conturH(ch), 'Visible', 'off')%inivisible now
             end
         end
-        tm = interp1(1:length(tm), tm, linspace(1, length(tm), size(whtLFP, 1)));%downsampled time
     end
-    %= end of (drawing step (plot acceleration)) =%
-    
+    if (~isempty(rCh) && chanSettingGrp(rCh(1)).changed) %any channels was selected and changed
+        rawData = chanSettingGrp(rCh(1)).rawSignal;%load raw data if true
+        initLvl = chanSettingGrp(rCh(1)).realsernum - 1;%initial drawing level
 
-    %= plot colormapped CSD =%
-    if (chanSettingGrp(rCh(1)).pltCSDmap && (size(whtLFP, 2) > 2)) %plot current source density (CSD)
-        if (size(whtLFP, 1) > 1e3) %long segment
-            ajj = ZavRCfilt(whtLFP, 0.5, 1e3, 'high');%remove DC
-        else %short segmen
-            ajj = whtLFP - repmat(mean(whtLFP(1:min(10, size(whtLFP, 1)), :), 1), length(tm), 1);%remove DC
+        %= timevector for raw and resampled signals =%
+        if rawData %raw data requested
+            prm.Fs = 1 / (hd.ch_si(rCh(1)) * 1e-6);%zavp.siS;%sampling frequency for raw data
+        else %resampled data requested
+            prm.Fs = zavp.dwnSmplFrq;%sampling frequency for rare data
         end
-    %     ajj = ajj ./ repmat(lfpVar(rCh, 1)' ./ min(lfpVar(rCh, 1)), length(tm), 1);%amplitude correction
+        %= end of (timevector for raw and resampled signals) =%
 
-        lfpCSD = -diff(ajj, 2, 2);%CSD
-        k = 3;%round(diff(segmEdge) / 100) + 1;%interval of smoothing
-        for t = 1:size(lfpCSD, 2) %run over channels
-            lfpCSD(:, t) = smooth(lfpCSD(:, t), k);%smoothing along time
+
+        %= common reference (step 1) =%
+        if chanSettingGrp(rCh(1)).comRef %common reference subtraction
+            tmpChnl = cgch;%requested channels
+        else %without common reference subtraction
+            tmpChnl = rCh;%requested channels
         end
+        if rawData %raw data is requested
+            whtLFP = ZavSynchLFP(zavp, hd, segms(sn, :), segmEdge, lfp, tmpChnl, rawData, nlxVer);%lfp phased with respect to stimulus moments
+%             trnsfrmlist(rCh(1)).list{end + 1} = 'raw data loaded. Attantion! All previous actions are not relevant';%add line
+            whtLFP = TunRawSignal(whtLFP, rCh(1), handles);%apply settings of channel group to raw signal
+        else %resampled data is requested
+            fLFP = lfp(:, tmpChnl, :);%no filters
+        end
+        %= end of (common reference (step 1)) =%
+
+
+        %= LFP-segmentation =%
+        if ~rawData %resampled data is requested
+            whtLFP = ZavSynchLFP(zavp, hd, segms(sn, :), segmEdge, fLFP, 1:size(fLFP, 2), rawData, nlxVer);%lfp phased with respect to stimulus moments
+        end
+        %= end of (LFP-segmentation) =%
+        tm = linspace(segmEdge(1), segmEdge(end), size(whtLFP, 1));%time vector (ms)
         
-        %spatial filtration
-        lfpCSD = filtfilt([0.607, 1, 0.607], 2.213, lfpCSD')';%3-channel spatial smoothing as in elephy
-%         for t = 1:size(lfpCSD, 1) %run over time
-%             lfpCSD(t, :) = smooth(lfpCSD(t, :), 5);%spatial filtration
-%         end
-
-        %interpolation (along channels)
-        ajj = lfpCSD;%copy of original CSD map
-        lfpCSD = zeros(size(ajj, 1), length(1:0.2:size(lfpCSD, 2)));
-        for t = 1:size(lfpCSD, 1) %run over time
-            lfpCSD(t, :) = interp1(1:(size(whtLFP, 2) - 2), ajj(t, :), 1:0.2:(size(whtLFP, 2) - 2));%interpolation along channels
+        %= DC-shift compensation =%
+        if chanSettingGrp(rCh(1)).dcShift %DC compensation
+            ii = 1:min(20, size(whtLFP, 1));%time near segment begin
+            %ii = (tm > -1e1) & (tm < 1e1);%time near synchro-event
+            ajj = median(whtLFP(ii, :, :), 1);%base-level
+            %ajj = median(whtLFP(:, :, :), 1);%base-level
+            whtLFP = whtLFP - repmat(ajj, [size(whtLFP, 1), 1, 1]);%subtract DC component
+%             trnsfrmlist(rCh(1)).list{end + 1} = 'subtract DC component';%add line
         end
+        %= end of (DC-shift compensation) =%
 
-        %subplot(lfp_ax);%set lfp_ax as a parent for next plot
-        %imagesc(tm / timeScalCoeff, initLvl + (2:(length(rCh) - 1)), lfpCSD');
-        set(clrMapH(cg), 'XData', tm / timeScalCoeff, 'YData', initLvl + (2:(length(rCh) - 1)), 'CData', lfpCSD', 'Visible', 'on')
-        caxis(lfp_ax, [str2double(get(handles.CSDcMapMin, 'String')), str2double(get(handles.CSDcMapMax, 'String'))])%colorbar range
-        
-        colormap('jet')
-    end
-    %= end of (plot CSD) =%
-    
-
-    %= plot spikes density =%
-    if (chanSettingGrp(rCh(1)).pltSpkMap || chanSettingGrp(rCh(1)).pltMUAfreq) %plot map of spikes frequency
-        binStep = [chanSettingGrp(rCh(1)).muaBin, chanSettingGrp(rCh(1)).precisF];%[bin size (ms), precision (must be integer)]
-        [~, basbins] = ZavOverHist(spks(rCh(1), 1).tStamp, binStep, segmEdge);%fast overlaped histogram (histc)
-        spkDens = zeros(length(basbins), numel(rCh), numel(sn));%memory preallocation for density of spikes in time (histogram)
-
-        for z = 1:numel(sn) %run over requested segments
-            jj = segms(sn(z), 1) + segmEdge;%time segment boundary (ms from begin of file)
-            sw = segms(sn(z), 3);%sweep
-            for ch = 1:numel(rCh) %run over channels
-                spkDens(:, ch, z) = ZavOverHist(spks(rCh(ch), sw).tStamp, binStep, jj);%fast overlaped histogram (histc)
-            end
+        %= common reference (step 2) =%
+        if chanSettingGrp(rCh(1)).comRef %common reference subtraction
+            ii = 1:min(20, size(whtLFP, 1));%time near segment begin
+            %ii = (tm > -1e1) & (tm < 1e1);%time near synchro-event
+            ajj = median(whtLFP(ii, :, :), 1);%base-level
+            wLFPcomm = mean(whtLFP - repmat(ajj, [size(whtLFP, 1), 1, 1]), 2);%common reference with adduction to zero-level of each channel in a group
+            [~, irch] = intersect(cgch, rCh);%number of selected (visible) channel of the group
+            whtLFP = whtLFP(:, irch, :) - repmat(wLFPcomm, [1, length(rCh), 1]);%subtract common reference
+%             trnsfrmlist(rCh(1)).list{end + 1} = 'subtract common reference';%add line
         end
-        spkDens = mean(spkDens, 3) / binStep(1);%mean spikes density (spikes / ms)
+        allSwLFP = whtLFP;%all sweeps lfp
+        if (size(whtLFP, 3) > 1) %many sweeps
+            whtLFP = mean(whtLFP, 3);%average by segments (after transformations)
+%             trnsfrmlist(rCh(1)).list{end + 1} = 'sweeps averaged';%add line
+        end
+        %= end of (common reference (step 2)) =%
 
-        dCoeff(1) = -1; dCoeff(2) = chanSettingGrp(rCh(1)).muaScale;%characteristic sizes
-        dCoeff(3) = dCoeff(1) * dCoeff(2);%scaling coefficient
 
-        clr = [0, 0, 1];%color of spikes density line
-        if chanSettingGrp(rCh(1)).pltSpkMap %plot colormapped MUA density
-        %     %interpolation (smooth along channels)
-        %     spkDensSC = zeros(size(spkDens, 1), length(1:0.25:length(rCh)));
-        %     for t = 1:size(spkDens, 1) %run over time
-        %         spkDensSC(t, :) = interp1(1:length(rCh), spkDens(t, :), 1:0.25:length(rCh));%interpolation along channels
-        %     end
-            spkDensSC = spkDens;
-            %smooth along time
-            for ch = 1:size(spkDens, 2) %rum over channels
-                spkDensSC(:, ch) = smooth(spkDens(:, ch), 3);%smooth along time
+        %= drawing step (plot acceleration) =%
+        rarStep = 1;%no additional downsampling
+        if (size(whtLFP, 1) > (10e3 * (1 + 19 * rawData))) %fast plot for long segments
+            rarStep = 1 + floor(size(whtLFP, 1) / (10e3 * (1 + 19 * rawData)));%plot with step
+            ajj = whtLFP;%copy of LFP segment
+            whtLFP = zeros(length(resample(ajj(:, 1), 1, rarStep)), size(ajj, 2));
+            for ch = 1:numel(rCh) %run over visible channels
+                whtLFP(:, ch) = resample(ajj(:, ch), 1, rarStep);%downsampled LFP
+            end
+%             trnsfrmlist(rCh(1)).list{end + 1} = ['additional downsampling (rarstep ', num2str(rarStep), ')'];%add line
+            ajj = allSwLFP;%copy of LFP segment
+            allSwLFP = zeros(length(resample(ajj(:, 1, 1), 1, rarStep)), size(ajj, 2), size(ajj, 3));
+            for z = 1:size(ajj, 3) %run over segments
+                for ch = 1:numel(rCh) %run over visible channels
+                    allSwLFP(:, ch, z) = resample(ajj(:, ch, z), 1, rarStep);%downsampled LFP
+                end
+            end
+            tm = interp1(1:length(tm), tm, linspace(1, length(tm), size(whtLFP, 1)));%downsampled time
+        end
+        %= end of (drawing step (plot acceleration)) =%
+
+
+        %= plot colormapped CSD =%
+        if (chanSettingGrp(rCh(1)).pltCSDmap && (size(whtLFP, 2) > 2)) %plot current source density (CSD)
+            ajj = whtLFP;%copy of LFP segment
+    %         if (size(whtLFP, 1) > 1e3) %long segment
+    %             ajj = ZavRCfilt(whtLFP, 0.5, 1e3, 'high');%remove DC
+    %         else %short segmen
+    %             %ajj = whtLFP - repmat(mean(whtLFP(1:min(10, size(whtLFP, 1)), :), 1), length(tm), 1);%remove DC
+    %             ajj = whtLFP - repmat(mean(whtLFP((tm >= -200) & (tm <= -50), :), 1), length(tm), 1);%remove DC
+    %         end
+            %ajj = ajj ./ repmat(lfpVar(rCh, 1)' ./ min(lfpVar(rCh, 1)), length(tm), 1);%amplitude correction
+
+            lfpCSD = -diff(ajj, 2, 2);%CSD
+            k = 3;%round(diff(segmEdge) / 100) + 1;%interval of smoothing
+            for ch = 1:size(lfpCSD, 2) %run over channels
+                lfpCSD(:, ch) = smooth(lfpCSD(:, ch), k);%smoothing along time
             end
 
-            %suplot(lfp_ax);%set lfp_ax as a parent for next plot
-            %imagesc(basbins / timeScalCoeff, initLvl + (1:length(rCh)), spkDensSC');
-            set(clrMapH(cg), 'XData', basbins / timeScalCoeff, 'YData', initLvl + (1:length(rCh)), 'CData', spkDensSC', 'Visible', 'on')
-            shading flat;
-            caxis(lfp_ax, [str2double(get(handles.SpkCMapMin, 'String')), str2double(get(handles.SpkCMapMax, 'String'))])%colorbar range
-            clr = [1, 1, 1];%color of spikes density line
+            %spatial filtration
+            if (size(lfpCSD, 2) > 10)
+                lfpCSD = filtfilt([0.607, 1, 0.607], 2.213, lfpCSD')';%3-channel spatial smoothing as in elephy
+%                 for t = 1:size(lfpCSD, 1) %run over time
+%                     lfpCSD(t, :) = smooth(lfpCSD(t, :), 5);%spatial filtration
+%                 end
+            end
+
+            %interpolation (along channels)
+            ajj = lfpCSD;%copy of original CSD map
+            lfpCSD = zeros(size(ajj, 1), length(1:0.2:size(lfpCSD, 2)));
+            for t = 1:size(lfpCSD, 1) %run over time
+                lfpCSD(t, :) = interp1(1:(size(whtLFP, 2) - 2), ajj(t, :), 1:0.2:(size(whtLFP, 2) - 2));%interpolation along channels
+            end
             
+            csdCmm = [str2double(get(handles.CSDcMapMin, 'String')), str2double(get(handles.CSDcMapMax, 'String'))];%CSD colormap min-max
+            lfpCSD = (lfpCSD / max(csdCmm)) + 0.5;%rescale colormap to satisfy [0, 1]-range of caxis
+            set(clrMapH(rCh(1)), 'XData', tm / timeScalCoeff, 'YData', initLvl + (2:(length(rCh) - 1)), 'CData', lfpCSD', 'Visible', 'on')
+            %caxis(lfp_ax, [str2double(get(handles.CSDcMapMin, 'String')), str2double(get(handles.CSDcMapMax, 'String'))])%colorbar range
+            caxis([0, 1])
+
             colormap('jet')
-        end %if ~chanSettingGrp(rCh(1)).pltCSDmap %no CSD plot choosed
+            
+%             trnsfrmlist(rCh(1)).list{end + 1} = 'current source density calculated';%add line
+%             if (rarStep > 1)
+%                 trnsfrmlist(rCh(1)).list{end} = [trnsfrmlist(rCh(1)).list{end}, '. Attantion! CSD calculated on downsampled data'];
+%             end
+        end %end of (if (chanSettingGrp(rCh(1)).pltCSDmap && (size(whtLFP, 2) > 2)) %plot current source density (CSD))
+        %= end of (plot CSD) =%
 
-        %= plot spikes densities
-        if chanSettingGrp(rCh(1)).pltMUAfreq %plot MUA frequency traces
-            %linHandl = plot(lfp_ax, basbins / timeScalCoeff, (spkDens / dCoeff(3)) + repmat(initLvl + (1:length(rCh)), length(basbins), 1), clr, 'LineWidth', 1);
-            %set(linHandl, 'ButtonDownFcn', {@Line_ButtonDownFcn, handles})%reaction on mouse-click
-            for ch = 1:size(spkDens, 2) %run over channels
-                set(spkDnLn(initLvl + ch), 'XData', basbins / timeScalCoeff, 'YData', (spkDens(:, ch) / dCoeff(3)) + initLvl + ch, 'Color', clr, 'Visible', 'on')
-                set(spkDnLn(initLvl + ch), 'UserData', {dCoeff, ch, timeScalCoeff, initLvl, rCh(ch)});%save amplitude coefficient and offset
-            end
 
-    %         [~, p1] = ds2nfu([0, 0], [0, abs(1 / dCoeff(1))]);%diff(p1) = length of scale bar in normalized units
-    %         set(handles.MUAscb, 'Position', [0.525, 0.15 0, diff(p1)], 'LineWidth', 5, 'Units', 'normalized', 'TextRotation', 90, 'HeadStyle', 'none',...
-    %             'String', [num2str(round(dCoeff(2) * 10) / 10), 'spikes/', num2str(binStep(1)), 'ms'], 'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left');
-        end
-    end
-    %= end of (plot spikes density) =%
-    
-    
-    %= plot LFP =%
-    if chanSettingGrp(rCh(1)).pltLFP %plot LFP traces
-        %= LFP scaling =%
-        dCoeff(1) = -1.0; dCoeff(2) = chanSettingGrp(rCh(1)).lfpScale;%characteristic sizes (amplitude coefficient)
-        dCoeff(3) = dCoeff(1) * dCoeff(2) * 1e3;%scaling coefficient
-        whtLFP = whtLFP / dCoeff(3);%scaled signals
-        allSwLFP = allSwLFP / dCoeff(3);%all sweeps lfp
-    
-        if (size(allSwLFP, 3) > 1) %averaging
-            for ch = 1:size(whtLFP, 2) %run over channels
-                for z = 1:size(allSwLFP, 3) %run over segments
-                    h = plot(lfp_ax, tm / timeScalCoeff, allSwLFP(:, ch, z) + initLvl + ch, 'Color', 0.9 * ones(1, 3));
-                    dltGrphObj = [dltGrphObj; h];%add object to be deleted
+        %= plot spikes density =%
+        if (chanSettingGrp(rCh(1)).pltSpkMap || chanSettingGrp(rCh(1)).pltMUAfreq || (chanSettingGrp(rCh(1)).contur && chanSettingGrp(rCh(1)).pltCSDmap)) %plot map of spikes frequency
+            binStep = [chanSettingGrp(rCh(1)).muaBin, chanSettingGrp(rCh(1)).precisF];%[bin size (ms), precision (must be integer)]
+            [~, basbins] = ZavOverHist(spks(rCh(1), 1).tStamp, binStep, segmEdge);%fast overlaped histogram (histc)
+            spkDens = zeros(length(basbins), numel(rCh), numel(sn));%memory preallocation for density of spikes in time (histogram)
+
+            for z = 1:numel(sn) %run over requested segments
+                jj = segms(sn(z), 1) + segmEdge;%time segment boundary (ms from begin of file)
+                sw = segms(sn(z), 3);%sweep
+                for ch = 1:numel(rCh) %run over visible channels
+                    spkDens(:, ch, z) = ZavOverHist(spks(rCh(ch), sw).tStamp, binStep, jj);%fast overlaped histogram (histc)
                 end
             end
+            spkDens = mean(spkDens, 3) / binStep(1);%mean spikes density (spikes / ms)
+
+            dCoeff(1) = -1; dCoeff(2) = chanSettingGrp(rCh(1)).muaScale;%characteristic sizes
+            dCoeff(3) = dCoeff(1) * dCoeff(2);%scaling coefficient
+
+            if (chanSettingGrp(rCh(1)).pltSpkMap || (chanSettingGrp(rCh(1)).contur && chanSettingGrp(rCh(1)).pltCSDmap)) %plot colormapped MUA density or contour
+            %     %interpolation (smooth along channels)
+            %     spkDensSC = zeros(size(spkDens, 1), length(1:0.25:length(rCh)));
+            %     for t = 1:size(spkDens, 1) %run over time
+            %         spkDensSC(t, :) = interp1(1:length(rCh), spkDens(t, :), 1:0.25:length(rCh));%interpolation along channels
+            %     end
+                spkDensSC = spkDens;
+                %smooth along time
+                for ch = 1:numel(rCh) %rum over visible channels
+                    spkDensSC(:, ch) = smooth(spkDens(:, ch), 3);%smooth along time
+                end
+                
+                muaCmm = [str2double(get(handles.SpkCMapMin, 'String')), str2double(get(handles.SpkCMapMax, 'String'))];%CSD colormap min-max
+                if chanSettingGrp(rCh(1)).contur %draw contour
+                    set(conturH(rCh(1)), 'XData', basbins / timeScalCoeff, 'YData', initLvl + (1:length(rCh)), 'ZData', spkDensSC', 'LevelList', linspace(muaCmm(1), muaCmm(2), 20), 'Visible', 'on')
+                elseif chanSettingGrp(rCh(1)).pltSpkMap
+                    spkDensSC = spkDensSC / max(muaCmm);%rescale colormap to satisfy [0, 1]-range of caxis
+                    set(clrMapH(rCh(1)), 'XData', basbins / timeScalCoeff, 'YData', initLvl + (1:length(rCh)), 'CData', spkDensSC', 'Visible', 'on')
+                    shading flat;
+                    caxis([0, 1])
+                    colormap('jet')
+                end
+            end %if ~chanSettingGrp(rCh(1)).pltCSDmap %no CSD plot choosed
+
+            %spikes densities
+            if chanSettingGrp(rCh(1)).pltMUAfreq %plot MUA frequency traces
+                for ch = 1:numel(rCh) %run over visible channels
+                    set(spkDnLn(rCh(ch)), 'XData', basbins / timeScalCoeff, 'YData', (spkDens(:, ch) / dCoeff(3)) + initLvl + ch, 'Visible', 'on', 'Color', clrList{chanSettingGrp(rCh(1)).muaLnClr, 1})
+                    set(spkDnLn(rCh(ch)), 'UserData', {dCoeff, ch, timeScalCoeff, initLvl, rCh(ch)});%save amplitude coefficient and offset
+                end
+                
+                %= MUA scale bars =%
+                if chanSettingGrp(rCh(1)).pltMUAfreq %plot MUA frequency traces
+                    %[~, sclBrLen] = ds2nfu([0, 0], [0, abs(1 / dCoeff(1))]);%diff(sclBrLen) - length of scale bar in normalized units
+                    set(voltMuaScal(rCh(1)), 'Position', [0.99, 1 - (axPos(2) + sclBrLen * (initLvl + (numel(rCh) / 2))) - sclBrLen, 0, sclBrLen], ...
+                        'String', [num2str(round(10 * dCoeff(2)) / 10), 'mua/ms'], 'Visible', 'on');
+                end
+                %= end of (MUA scale bars) =%
+            end
+        end %end of (if (chanSettingGrp(rCh(1)).pltSpkMap || chanSettingGrp(rCh(1)).pltMUAfreq || (chanSettingGrp(rCh(1)).contur && chanSettingGrp(rCh(1)).pltCSDmap)) %plot map of spikes frequency)
+        %= end of (plot spikes density) =%
+
+
+        %= plot LFP =%
+        if chanSettingGrp(rCh(1)).pltLFP %plot LFP traces
+            %= LFP scaling =%
+            dCoeff(1) = -1.0; dCoeff(2) = chanSettingGrp(rCh(1)).lfpScale;%characteristic sizes (amplitude coefficient)
+            dCoeff(3) = dCoeff(1) * dCoeff(2) * 1e3;%scaling coefficient (microvolts)
+            whtLFP = whtLFP / dCoeff(3);%scaled signals
+            allSwLFP = allSwLFP / dCoeff(3);%all sweeps lfp
+
+%             %background lines (to be averaged)
+%             if (size(allSwLFP, 3) > 1) %averaging
+%                 for ch = 1:numel(rCh) %run over visible channels
+%                     for z = 1:size(allSwLFP, 3) %run over segments
+%                         h = plot(lfp_ax, tm / timeScalCoeff, allSwLFP(:, ch, z) + initLvl + ch, 'Color', 0.9 * ones(1, 3));
+%                         dltGrphObj = [dltGrphObj; h];%add object to be deleted
+%                         setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
+%                     end
+%                 end
+%             end
+
+            for ch = 1:numel(rCh) %run over visible channels
+                if chanSettingGrp(rCh(ch)).comZero %common zeros mode
+                    chLvl = numel(rCh) / 2;%middle of axis
+                else %spread mode
+                    chLvl = ch;%channel level
+                end
+                set(lfpLn(rCh(ch)), 'XData', tm / timeScalCoeff, 'YData', whtLFP(:, ch) + initLvl + chLvl, 'Visible', 'on', 'Color', clrList{chanSettingGrp(rCh(1)).lfpLnClr, 1})
+                set(lfpLn(rCh(ch)), 'UserData', {dCoeff, ch, timeScalCoeff, initLvl, rCh(ch)});%save amplitude coefficient and offset
+            end
+
+            %= plot bursts =%
+            if (~isempty(brst) && (length(sn) == 1) && isequal(get(handles.ShowBrst, 'State'), 'on')) %single segment
+                jj = vertcat(brst(:).t);
+                p1 = find((jj(:, 1) < (segms(sn, 1) + segmEdge(2))) & (jj(:, 2) > (segms(sn, 1) + segmEdge(1))));%find visible bursts
+                for t = p1' %run over visible bursts
+                    [~, ii] = intersect(rCh, brst(t).ch);%common channels
+                    ii = ii(:)';
+                    if ~isempty(ii) %some channels contain the burst
+                        jj = ((tm >= (brst(t).t(1) - segms(sn, 1))) & (tm <= (brst(t).t(2) - segms(sn, 1))));
+                        h = plot(lfp_ax, tm(jj) / timeScalCoeff, whtLFP(jj, ii) + repmat(initLvl + ii, sum(jj), 1), 'm', 'LineWidth', 1);
+                        dltGrphObj = [dltGrphObj; h];%add object to be deleted
+                        setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
+                    end
+                end
+            end
+            %= end of (plot bursts) =%
+            
+            %= LFP scale bars =%
+            if chanSettingGrp(rCh(1)).pltLFP %plot LFP traces
+                %[~, sclBrLen] = ds2nfu([0, 0], [0, abs(1 / dCoeff(1))]);%diff(sclBrLen) - length of scale bar in normalized units
+                bufStr = get(voltMuaScal(rCh(1)), 'String');%string of MUA frequency scale if exist
+                set(voltMuaScal(rCh(1)), 'Position', [0.99, 1 - (axPos(2) + sclBrLen * (initLvl + (numel(rCh) / 2))) - sclBrLen, 0, sclBrLen], ...
+                    'String', [bufStr, char(10), num2str(round(10 * dCoeff(2)) / 10), 'mV'], 'Visible', 'on')
+            end
+            %= end of (LFP scale bars) =%
+        end %end of (if chanSettingGrp(rCh(1)).pltLFP %plot LFP traces)
+        %= end of (plot LFP) =%
+
+        %= plot spike bars =%
+        if ((length(sn) == 1) && chanSettingGrp(rCh(1)).pltMUA) %single sweep (segment)
+            jj = segms(sn, 1) + segmEdge;%absolute time of the segment boundary ( ms, e.i. from begin of file)
+            sw = segms(sn, 3);%sweep
+            for ch = 1:numel(rCh) %run over visible channels
+                spkDens = spks(rCh(ch), sw).tStamp((spks(rCh(ch), sw).tStamp > jj(1)) & (spks(rCh(ch), sw).tStamp < jj(end))) - segms(sn, 1);%unites in the segment
+                spkCdens = NaN(3 * length(spkDens), 2);%continuous trace of spikes
+                spkCdens(1:3:end, 1) = spkDens;%time point of lower level
+                spkCdens(2:3:end, 1) = spkDens;%time point of upper level
+                spkCdens(1:3:end, 2) = initLvl + ch - 0.4;%lower level
+                spkCdens(2:3:end, 2) = initLvl + ch - 0.2;%upper level
+                %plot(lfp_ax, spkCdens(:, 1) / timeScalCoeff, spkCdens(:, 2), 'r', 'LineWidth', 1.5)
+                set(spkBr(rCh(ch)), 'XData', spkCdens(:, 1) / timeScalCoeff, 'YData', spkCdens(:, 2), 'Visible', 'on', 'Color', clrList{chanSettingGrp(rCh(1)).muaBarClr, 1})
+            end
         end
+        %= end of (plot spike bars) =%
         
-        %linHandl = plot(lfp_ax, tm / timeScalCoeff, whtLFP + repmat(initLvl + (1:length(rCh)), length(tm), 1), 'k', 'LineWidth', 1);
-        %set(linHandl, 'ButtonDownFcn', {@Line_ButtonDownFcn, handles})%reaction on mouse-click
-        for ch = 1:size(whtLFP, 2) %run over channels
-            set(lfpLn(initLvl + ch), 'XData', tm / timeScalCoeff, 'YData', whtLFP(:, ch) + initLvl + ch, 'Visible', 'on', 'Color', zeros(1, 3))
-            set(lfpLn(initLvl + ch), 'UserData', {dCoeff, ch, timeScalCoeff, initLvl, rCh(ch)});%save amplitude coefficient and offset
-        end
-
-        %= plot bursts =%
-        if (~isempty(brst) && (length(sn) == 1) && isequal(get(handles.ShowBrst, 'State'), 'on')) %single segment
-            jj = vertcat(brst(:).t);
-            p1 = find((jj(:, 1) < (segms(sn, 1) + segmEdge(2))) & (jj(:, 2) > (segms(sn, 1) + segmEdge(1))));%find visible bursts
-            for t = p1' %run over visible bursts
-                [~, ii] = intersect(rCh, brst(t).ch);%common channels
-                ii = ii(:)';
-                if ~isempty(ii) %some channels contain the burst
-                    jj = ((tm >= (brst(t).t(1) - segms(sn, 1))) & (tm <= (brst(t).t(2) - segms(sn, 1))));
-                    h = plot(lfp_ax, tm(jj) / timeScalCoeff, whtLFP(jj, ii) + repmat(initLvl + ii, sum(jj), 1), 'm', 'LineWidth', 1);
-                    dltGrphObj = [dltGrphObj; h];%add object to be deleted
-                end
-            end
-        end
-    end
-    %= end of (plot LFP) =%
-    
-
-    %= plot spike bars =%
-    if ((length(sn) == 1) && chanSettingGrp(rCh(1)).pltMUA) %single sweep (segment)
-        jj = segms(sn, 1) + segmEdge;%absolute time of the segment boundary ( ms, e.i. from begin of file)
-        sw = segms(sn, 3);%sweep
-        for ch = 1:length(rCh) %run over wanted channels
-            spkDens = spks(rCh(ch), sw).tStamp((spks(rCh(ch), sw).tStamp > jj(1)) & (spks(rCh(ch), sw).tStamp < jj(end))) - segms(sn, 1);%unites in the segment
-            spkCdens = NaN(3 * length(spkDens), 2);%continuous trace of spikes
-            spkCdens(1:3:end, 1) = spkDens;%time point of lower level
-            spkCdens(2:3:end, 1) = spkDens;%time point of upper level
-            spkCdens(1:3:end, 2) = initLvl + ch - 0.4;%lower level
-            spkCdens(2:3:end, 2) = initLvl + ch - 0.2;%upper level
-            %plot(lfp_ax, spkCdens(:, 1) / timeScalCoeff, spkCdens(:, 2), 'r', 'LineWidth', 1.5)
-            set(spkBr(initLvl + ch), 'XData', spkCdens(:, 1) / timeScalCoeff, 'YData', spkCdens(:, 2), 'Visible', 'on')
-        end
-    end
-    %= end of (plot spike bars) =%
-    
-
-    % %= scale bars =% not ended
-    % p1 = str2double(get(handles.LFPScale, 'String'));
-    % if ~isempty(p1)
-    %     if ~isfinite(p1)
-    %         p1 = max(max(abs(whtLFP)));
-    %         set(handles.LFPScale, 'String', num2str(p1))
-    %     end
-    % end
-    %
-    % set(get(lfp_ax, 'YLabel'), 'String', 'channels', 'Units', 'normalized', 'Position', [-0.06, 0.6, 1])
-    % [~, p1] = ds2nfu([0, 0], [0, abs(1 / dCoeff(1))]);%diff(p1) = length of scale bar in normalized units
-    % set(handles.LFPscb, 'Position', [0.025, 0.02, 0, diff(p1)], 'LineWidth', 5, 'Units', 'normalized', 'TextRotation', 90, 'HeadStyle', 'none',...
-    %     'String', [num2str(round(dCoeff(2))), ' \muV'], 'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left', 'FontSize', 9);
-    %
-    % %= end of (scale bars) =%
+    end %end of (if (~isempty(rCh) && chanSettingGrp(rCh(1)).changed) %any channels was selected and changed)
     
     %= vertical axis labels =%
-    for t = 1:length(rCh)
-        if ~isempty(chTabData{rCh(t), 2}) %alternames was signed
-            chnlStr = [chnlStr; chTabData(rCh(t), 2)];%alter name of channels
+    for ch = 1:numel(rCh) %run over visible channels
+        if ~isempty(chTabData{rCh(ch), 5}) %alternames was signed
+            chnlStr = [chnlStr; chTabData(rCh(ch), 5)];%alter name of channels
         else
-            chnlStr = [chnlStr; chTabData(rCh(t), 1)];%numbered channels
+            chnlStr = [chnlStr; chTabData(rCh(ch), 1)];%numbered channels
         end
     end
     %= end of (vertical axis labels) =%
-
-    initLvl = initLvl + length(rCh);%drawing level for next group
-    end %end of (if ~isempty(rCh) %any channels was selected)
 end %end of (for cg = unqChnlGrp %run over unique groups)
-setappdata(evi, 'chanSettingGrp', chanSettingGrp);%save channels group setting
+
+for ch = 1:length(chanSettingGrp) %run over all channels
+    chanSettingGrp(ch).changed = false;%not changed
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 
 if (size(allSwLFP, 3) > 1) %average requested
     h = get(lfp_ax, 'Children');
@@ -1001,28 +1149,28 @@ if (size(allSwLFP, 3) > 1) %average requested
 end
 
 %= complete graph creation =%
-rCh = find(horzcat(chTabData{:, 3}));%all selected channels
-
-y_lmt = [-0.05, length(rCh) + 1.05];%vertical limits
 set(lfp_ax, 'YDir', 'reverse', 'XLim', segmEdge / timeScalCoeff, 'YLim', y_lmt)
 set(get(lfp_ax, 'XLabel'), 'String', ['time, ', timeUnit])
 set(lfp_ax, 'YTick', 1:length(chnlStr), 'YTickLabel', chnlStr)
 if get(handles.ShowMarkers, 'Value') %show marker
     h = plot(lfp_ax, [0, 0], y_lmt, 'c', 'LineWidth', 2);%nul-time line (synchro-event)
     dltGrphObj = [dltGrphObj; h];%add object to be deleted
+    setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
 end
 
 if (length(sn) == 1) %single segment is shown
     set(evi, 'Name', ['Eview - ', flNm, ' (', timeStr(sn, :), ')'])
     h = text(0, y_lmt(1) + diff(y_lmt) / 80, timeStr(sn, :));
     dltGrphObj = [dltGrphObj; h];%add object to be deleted
+    setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
     
     if get(handles.ShowMarkers, 'Value') %show marker
         extSegms = getappdata(evi, 'extSegms');%external stimulus sent during experiment
         for t = 1:size(extSegms, 1) %run over external stimulus
             if ((extSegms(t, 1) > (segms(sn, 1) + segmEdge(1))) && (extSegms(t, 1) < (segms(sn, 1) + segmEdge(2))) && (extSegms(t, 3) == segms(sn, 3))) %the event is in visible range
-                h = plot(lfp_ax, (extSegms(t, 1) - extSegms(sn, 1)) * [1, 1] / timeScalCoeff, y_lmt, 'c', 'LineWidth', 2);%event-line
+                h = plot(lfp_ax, (extSegms(t, 1) - segms(sn, 1)) * [1, 1] / timeScalCoeff, y_lmt, 'c', 'LineWidth', 2);%event-line
                 dltGrphObj = [dltGrphObj; h];%add object to be deleted
+                setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
             end
         end
 
@@ -1030,8 +1178,10 @@ if (length(sn) == 1) %single segment is shown
             if ((eventsTags{t, 1} > (segms(sn, 1) + segmEdge(1))) && (eventsTags{t, 1} < (segms(sn, 1) + segmEdge(2)))) %the event is in visible range
                 h = plot(lfp_ax, (eventsTags{t, 1} - segms(sn, 1)) * [1, 1] / timeScalCoeff, y_lmt, 'g', 'LineWidth', 2);%event-line
                 dltGrphObj = [dltGrphObj; h];%add object to be deleted
+                setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
                 h = text((eventsTags{t, 1} - segms(sn, 1)) / timeScalCoeff, y_lmt(1) + diff(y_lmt) / 80, eventsTags{t, 2});
                 dltGrphObj = [dltGrphObj; h];%add object to be deleted
+                setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
             end
         end
     end
@@ -1041,15 +1191,24 @@ if (length(sn) == 1) %single segment is shown
         if ((manlDet(t).t > (segms(sn, 1) + segmEdge(1))) && (manlDet(t).t < (segms(sn, 1) + segmEdge(2))) && (manlDet(t).sw == segms(sn, 3))) %the event is in visible range
             h = plot(lfp_ax, (manlDet(t).t - segms(sn, 1)) * [1, 1] / timeScalCoeff, y_lmt, 'b', 'LineWidth', 1.5);%event-line
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
             h = text((manlDet(t).t - segms(sn, 1)) / timeScalCoeff, y_lmt(1) + diff(y_lmt) / 80, 'md');
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %save new set of objects to be deleted
         end
     end
 else
     set(evi, 'Name', ['Eview - ', flNm, ' (', timeStr(sn(1), :), ' - ', timeStr(sn(end), :), ')'])
 end
 %= end of (complete graph creation) =%
-setappdata(evi, 'dltGrphObj', dltGrphObj)%new array with deletable object handles
+% setappdata(evi, 'dltGrphObj', dltGrphObj) %new array with deletable object handles
+
+%= complete transformations list =%
+% setappdata(evi, 'trnsfrmlist', trnsfrmlist) %signal transformations list
+if ~isempty(findobj('Name', 'ShowTransformList')) %transformations-list-figure window exist
+    TransformList_ClickedCallback([], [], handles)%renew transformations list
+end
+%= end of (complete transformations list) =%
 
 
 
@@ -1059,7 +1218,13 @@ function Average_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+evi = handles.Eview;%handle of the application window
 set(hObject, 'Value', 1);
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -1150,7 +1315,7 @@ if (nCrs > 1) %many labels
         end
     end
 end
-setappdata(evi, 'dataCurs', dataCurs);
+setappdata(evi, 'dataCurs', dataCurs)
 
 % --------------------------------------------------------------------
 function ShowBrst_ClickedCallback(hObject, eventdata, handles)
@@ -1158,6 +1323,12 @@ function ShowBrst_ClickedCallback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+evi = handles.Eview;%handle of the application window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+for ch = 1:length(chanSettingGrp) %run over channels
+    chanSettingGrp(ch).changed = true;%redraw all lines
+end
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 PlotAll(handles);%plot with new parameters
 
 
@@ -1182,7 +1353,7 @@ clkIn(1) = ((bgnXY(1, 1) >= x_lim(1)) && (bgnXY(1, 1) <= x_lim(2)) && ...
             (bgnXY(1, 2) >= y_lim(1)) && (bgnXY(1, 2) <= y_lim(2))); %click point is in axes limits
 
 if ~any(clkIn) %no one axes clicked
-    setappdata(evi, 'bgnXY', []);%start point of frame
+    setappdata(evi, 'bgnXY', []) %start point of frame
     if ((bgnXY(1, 1) < x_lim(1)) && ... click was near left edge of LFP axis
         (bgnXY(1, 2) >= y_lim(1)) && (bgnXY(1, 2) <= y_lim(2))) %call for channel group settings
         %number of visible selected channel = round(bgnXY(1, 2))
@@ -1200,8 +1371,8 @@ end
 dFrmH = getappdata(evi, 'dFrmH');%handle of frame
 axFrm = getappdata(evi, 'axFrm');%handle of clicked axes
 bgnXY = get(axN, 'CurrentPoint');
-setappdata(evi, 'bgnXY', bgnXY);%start point of frame
-setappdata(evi, 'endXY', []);%end point of frame
+setappdata(evi, 'bgnXY', bgnXY) %start point of frame
+setappdata(evi, 'endXY', []) %end point of frame
 if (isempty(dFrmH) || ~isequal(axFrm, axN)) %new frame (may on other axis)
     if (~isempty(dFrmH) && ishandle(dFrmH)) %frame exist on other axes
         delete(dFrmH)%destroy object
@@ -1210,8 +1381,8 @@ if (isempty(dFrmH) || ~isequal(axFrm, axN)) %new frame (may on other axis)
     y_lim = get(axN, 'YLim');
     dFrmH = plot(axN, mean(x_lim), mean(y_lim), 'r-');
     set(axN, 'XLim', x_lim, 'YLim', y_lim);
-    setappdata(evi, 'dFrmH', dFrmH);%handle of frame
-    setappdata(evi, 'axFrm', axN);%handle of clicked axes
+    setappdata(evi, 'dFrmH', dFrmH) %handle of frame
+    setappdata(evi, 'axFrm', axN) %handle of clicked axes
 end
 end %if ~isempty(lfpLn) %data was loaded
 
@@ -1260,11 +1431,11 @@ end
 
 %immediately remove the frame
 delete(getappdata(evi, 'dFrmH'))
-setappdata(evi, 'dFrmH', []);%drag frame handle
-setappdata(evi, 'bgnXY', []);%begin point of rectangle draw
-setappdata(evi, 'endXY', []);%end point of rectangle draw
+setappdata(evi, 'dFrmH', []) %drag frame handle
+setappdata(evi, 'bgnXY', []) %begin point of rectangle draw
+setappdata(evi, 'endXY', []) %end point of rectangle draw
 
-hd = getappdata(evi, 'hd');%header
+hd = getappdata(evi, 'hd');%file header
 segms = getappdata(evi, 'segms');%segments
 sn = str2double(get(handles.CurrSegm, 'String'));%segments of signal (sweeps)
 
@@ -1304,7 +1475,7 @@ if ~isempty(lfpLn) %data was loaded
                     set(lfpSpctFigH, 'Name', 'LFP spectra', 'NumberTitle', 'off', 'Units', 'normalized');
                     lfp = getappdata(evi, 'lfp');
                     zavp = getappdata(evi, 'zavp');
-                    hd = getappdata(evi, 'hd');
+                    hd = getappdata(evi, 'hd');%file header
                     whtLFP = ZavSynchLFP(zavp, hd, [segms(sn, 1) + x_lim(1) * dCoeff{3}, repmat([NaN, 1, 1], numel(sn), 1)], [0, round(diff(bT.t))], lfp, bT.ch, 0, 0);
                     whtLFP = ZavFilter(whtLFP, 1e3, 'high', 5, 2);
                     whtLFP = mean(whtLFP, 3);
@@ -1323,7 +1494,7 @@ if ~isempty(lfpLn) %data was loaded
                     xlabel('frequency, Hz')
                     ylabel('power')
                     lgndStr = {};
-                    for z = bT.ch
+                    for z = bT.ch %run over selected channels
                         lgndStr{end + 1} = ['ch', num2str(z)];
                     end
                     lgndStr{end + 1} = 'average';
@@ -1342,7 +1513,7 @@ if ~isempty(lfpLn) %data was loaded
                     muaSpctFigH = figure;
                     set(muaSpctFigH, 'Name', 'MUA spectra', 'NumberTitle', 'off', 'Units', 'normalized')
                     spks = getappdata(evi, 'spks');
-                    binStep = [str2double(get(handles.SpkBin, 'String')), str2double(get(handles.HistPrecision, 'String'))];%[bin size (ms), precision (must be integer)]
+                    binStep = [chanSettingGrp(bT.ch(1)).muaBin, chanSettingGrp(bT.ch(1)).precisF];%[bin size (ms), precision (must be integer)]
                     [~, basbins] = ZavOverHist(spks(bT.ch(1), 1).tStamp, binStep, bT.t);%fast overlaped histogram (histc)
                     spkDens = zeros(length(basbins), numel(bT.ch), numel(sn));%memory preallocation for density of spikes in time (histogram)
 
@@ -1422,23 +1593,29 @@ if ~isempty(lfpLn) %data was loaded
                 end
             end
             if (sb) %some burst exist on selected range
-                setappdata(evi, 'selectedBrst', b);%selected burst
+                setappdata(evi, 'selectedBrst', b) %selected burst
             else %the new burst demand
                 if ((diff(round(bT.t)) > 5) && ~isempty(bT.ch)) %long segment
                     %z - number of the new burst
                     brst(z).t = round(bT.t);%absolute time (ms = samples)
                     brst(z).ch = bT.ch;%channels
-                    setappdata(evi, 'selectedBrst', z);%selected burst
-                    setappdata(evi, 'brst', brst);
+                    setappdata(evi, 'selectedBrst', z) %selected burst
+                    setappdata(evi, 'brst', brst)
                     set(handles.ShowBrst, 'Enable', 'on')
                     set(handles.ShowBrst, 'State', 'on')
+
+                    chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+                    for ch = 1:length(chanSettingGrp) %run over channels
+                        chanSettingGrp(ch).changed = true;%redraw all lines
+                    end
+                    setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
                     PlotAll(handles);%plot with new parameters
                 end
                 set(handles.SaveBursts, 'UserData', 1)%set flag of bursts changed
             end
         end %end of (if isequal(get(handles.PwrSpectrWin, 'State'), 'on') %spectrum in window selected)
-    elseif (isequal(get(handles.ManualDetect, 'State'), 'on') || ... manual detection choosed
-            get(handles.CutManual, 'Value') ... search inside manually detected
+    elseif (isequal(get(handles.ManualDetect, 'State'), 'on') ...|| ... manual detection choosed
+            ...get(handles.CutManual, 'Value') ... search inside manually detected
            )
         manlDet = getappdata(evi, 'manlDet');%manually detected events
         lfp_ax = handles.LFP_ax;%LFP axis handle
@@ -1503,9 +1680,10 @@ if ~isempty(lfpLn) %data was loaded
             y_lmt = [-0.05, length(rCh) + 1.05];%vertical limits
             h = plot(lfp_ax, (manlDet(k).t - segms(sn, 1)) * [1, 1] / usrDat{3}, y_lmt, 'b', 'LineWidth', 1.5);%event-line
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %new array with deletable object handles
             h = text((manlDet(k).t - segms(sn, 1)) / usrDat{3}, y_lmt(1) + diff(y_lmt) / 80, 'md');
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
-            setappdata(evi, 'dltGrphObj', dltGrphObj)%new array with deletable object handles
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %new array with deletable object handles
         else %search inside manually detected
             manlDet(k).subT = segms(sn, 1) + tmLFP(p3);%absolute time of manually detected event (ms from record start)
             
@@ -1514,9 +1692,10 @@ if ~isempty(lfpLn) %data was loaded
             y_lmt = [-0.05, length(rCh) + 1.05];%vertical limits
             h = plot(lfp_ax, (manlDet(k).subT - segms(sn, 1)) * [1, 1] / usrDat{3}, y_lmt, 'y', 'LineWidth', 1.5);%event-line
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %new array with deletable object handles
             h = text((manlDet(k).subT - segms(sn, 1)) / usrDat{3}, y_lmt(1) + diff(y_lmt) / 80, 'md');
             dltGrphObj = [dltGrphObj; h];%add object to be deleted
-            setappdata(evi, 'dltGrphObj', dltGrphObj)%new array with deletable object handles
+            setappdata(evi, 'dltGrphObj', dltGrphObj) %new array with deletable object handles
         end
         manlDet(k).sw = segms(sn, 3);%sweep number
         
@@ -1537,7 +1716,7 @@ if ~isempty(lfpLn) %data was loaded
         [~, ii] = sort(jj(:, 1));%sorted events
         manlDet = manlDet(ii);%sorted events
         
-        setappdata(evi, 'manlDet', manlDet);%manually detected events
+        setappdata(evi, 'manlDet', manlDet) %manually detected events
         set(handles.CutManual, 'String', ['mdet ', num2str(length(manlDet))]);
     end
 end %if ~isempty(lfpLn) %data was loaded
@@ -1559,501 +1738,781 @@ visChNum = horzcat(chanSettingGrp(:).realsernum);%actual serial numbers of the c
 slctCh = find(visChNum == slVisCh);%real number of channel
 
 %= creat dialog window =%
-tunFig = figure('Name', 'Tune channels view', 'Units', 'normalized', 'MenuBar','none', ...
-    'NumberTitle', 'off', 'Position', [0.40546875 0.5419921875 0.36796875 0.2392578125], ...
+tunFig = figure('Name', 'Tune channels view', 'Units', 'pixels', 'MenuBar','none', ...
+    'NumberTitle', 'off', 'Position', [520, 435, 488, 366], ...
     'Resize', 'off', 'Tag', 'TunChanFig', 'Visible', 'off', 'WindowStyle', 'modal', 'Color', [0.831, 0.816, 0.784]);
 
-tfh(1:36) = struct('h', []);%structure with tune figure control handles
+tfh(1:49) = struct('h', []);%structure with tune figure control handles
 
-tfh(1).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(1).h = uibuttongroup('Parent', tunFig, 'Units', 'pixels', ...
+                    'Tag', 'LFPlines', ...
+                    'Clipping', 'on', ...
+                    'Position', [9 65 205 256], ...
+                    'FontSize', 9, ...
+                    'FontWeight', 'bold', ...
+                    'Title', 'LFP lines', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));
+                
+tfh(2).h = uibuttongroup('Parent', tunFig, 'Units', 'pixels', ...
+                    'Tag', 'MUAlines', ...
+                    'Clipping', 'on', ...
+                    'Position', [238 65 242 256], ...
+                    'FontSize', 9, ...
+                    'FontWeight', 'bold', ...
+                    'Title', 'MUA lines', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));
+                
+tfh(3).h = uibuttongroup('Parent', tunFig, 'Units', 'pixels', ...
+                    'Tag', 'ColorMaps', ...
+                    'Clipping', 'on', ...
+                    'Position', [121 1 214 64],...
+                    'FontSize', 9, ...
+                    'FontWeight', 'bold', ...
+                    'Title', 'Color maps', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));
+
+tfh(4).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
                     'Style', 'pushbutton', ...
                     'Tag', 'ApplySets', ...
                     'Value', [], ...
                     'String', 'OK', ...
-                    'Position', [0.86986301369863 0.0359712230215827 0.107305936073059 0.12], ...
-                    'Callback', {@ApplyNewChanSets, handles}, ...
+                    'TooltipString', 'применить настройки', ...
+                    'Position', [415 15 51 34], ...
+                    'Callback', {@CloseTunChannelsWindow, handles}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(2).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(5).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'ChGrpName', ...
-                    'Value', [], 'UserData', slctCh, ...
+                    'Value', [], ...
+                    'UserData', slctCh, ...
                     'String', ['channel group: ', num2str(chanSettingGrp(slctCh).grpName)], ...
-                    'Position', [0 0.902040816326531 1 0.0938775510204084], ...
+                    'TooltipString', 'выбранная группа каналов', ...
+                    'Position', [122 344 360 20], ...
                     'Callback', {}, ...
                     'FontSize', 10, 'HorizontalAlignment', 'left', ...
                     'BackgroundColor', [0.9, 0.9, 0.9]);
                 
-tfh(3).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(6).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'LowCutTxt', ...
                     'Value', [], ...
                     'String', 'Hz', ...
-                    'Position', [0.148619957537155 0.714285714285714 0.0467091295116773 0.0693877551020408], ...
+                    'Position', [73 185 20 16], ...
                     'Callback', {}, ...
                     'FontSize', 9, 'HorizontalAlignment', 'left',...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(4).h = uicontrol('Parent', tunFig, 'Units','normalized', ...
+tfh(7).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'LowCutFilter', ...
                     'Value', chanSettingGrp(slctCh).lowCut, ...
                     'String', 'LowCut filter', ...
-                    'Position', [0.0114155251141553 0.776567317574517 0.212328767123288 0.1], ...
+                    'TooltipString', 'отсечь низкие частоты ЛПП', ...
+                    'Position', [6 207 92 20], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(5).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(8).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'LowCutFrq', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).lowCutFrq), ...
-                    'Position', [0.0114155251141553 0.692526794890624 0.136986301369863 0.1], ...
+                    'TooltipString', 'граница отсечения низких частот ЛПП', ...
+                    'Position', [6 182 65 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
                 
-tfh(6).h = uicontrol('Parent', tunFig, 'Units','normalized', ...
+tfh(9).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'HighCutTxt', ... 
                     'Value', [], ...
                     'String', 'Hz', ...
-                    'Position', [0.411889596602972 0.714285714285714 0.0467091295116773 0.0693877551020408], ...
+                    'Position', [178 185 20 16], ...
                     'Callback', {}, ...
                     'FontSize', 9, 'HorizontalAlignment', 'left',...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(7).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(10).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'HighCutFilter', ...
                     'Value', chanSettingGrp(slctCh).highCut, ...
                     'String', 'HighCut filter', ...
-                    'Position', [0.271689497716895 0.776567317574517 0.212328767123288 0.1], ...
+                    'TooltipString', 'отсечь высокие частоты ЛПП', ...
+                    'Position', [103 206 92 20], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(8).h = uicontrol('Parent', tunFig, 'Units','normalized', ...
+tfh(11).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'HighCutFrq', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).highCutFrq), ...
-                    'Position', [0.271689497716894 0.692526794890624 0.136986301369863 0.1], ...
+                    'TooltipString', 'граница отсечения высоких частот ЛПП', ...
+                    'Position', [103 182 73 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
 
-tfh(9).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(12).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'RecovDC', ...
                     'Value', chanSettingGrp(slctCh).recovDC, ...
                     'String', 'recovDC', ...
-                    'Position', [0.0445859872611465 0.567346938775511 0.16135881104034 0.102040816326531], ...
+                    'TooltipString', 'восстановить полночастотный ЛПП', ...
+                    'Position', [6 158 70 20], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(10).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(13).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'LFPscalTxt1', ...
                     'Value', [], ...    
-                    'String', 'LFP scale', ...
-                    'Position', [0.634819532908705 0.23265306122449 0.176220806794055 0.102040816326531], ...
+                    'String', {'LFP '; 'scale '}, ...
+                    'Position', [26 73 45 36], ...
                     'Callback', {}, ...
-                    'FontSize', 10, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize', 9, 'HorizontalAlignment', 'right', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(11).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(14).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'LFPscalTxt2', ...
                     'Value', [], ...
                     'String', 'mV', ...
-                    'Position', [0.789808917197452 0.175510204081633 0.0467091295116773 0.0693877551020408], ...
+                    'Position', [140 85 22 16], ...
                     'Callback', {}, ...
-                    'FontSize', 9, 'HorizontalAlignment', 'left',...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize', 9, 'HorizontalAlignment', 'left', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(12).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(15).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'LFPscale', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).lfpScale), ...
-                    'Position', [0.658174097664543 0.159183673469388 0.129511677282378 0.102040816326531], ...
+                    'TooltipString', 'масштаб ЛПП', ...
+                    'Position', [75 82 61 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
                 
-tfh(13).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(16).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'pushbutton', ...
                     'Tag', 'ReduceLFP', ...
                     'Value', [], ...
-                    'String', '<', ...
-                    'Position', [0.651804670912951 0.0489795918367347 0.0658174097664544 0.102040816326531],...
-                    'Callback', {@DownsizeAmplScale, tfh(12).h}, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'String', '-', ...
+                    'TooltipString', 'показать мелкие детали ЛПП', ...
+                    'Position', [73 56 31 24],...
+                    'Callback', {@DownsizeAmplScale, tfh(15).h}, ...
+                    'FontSize', 12, ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(14).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(17).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'pushbutton', ...
                     'Tag', 'EnlargeLFP', ...
                     'Value', [], ...
-                    'String', '>', ...
-                    'Position', [0.732484076433121 0.0489795918367347 0.0658174097664544 0.102040816326531], ...
-                    'Callback', {@UpsizeAmplScale, tfh(12).h}, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'String', '+', ...
+                    'TooltipString', 'показать крупные детали ЛПП', ...
+                    'Position', [108 56 31 24], ...
+                    'Callback', {@UpsizeAmplScale, tfh(15).h}, ...
+                    'FontSize', 12, ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(15).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(18).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'CommRef', ...
                     'Value', chanSettingGrp(slctCh).comRef, ...
                     'String', 'Comm.ref.', ...
-                    'Position', [0.787685774946921 0.66530612244898 0.182590233545648 0.102040816326531], ...
+                    'TooltipString', 'вычесть общее среднее каналов группы', ...
+                    'Position', [6 114 86 20], ...
                     'Callback', [], ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(16).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(19).h = uicontrol('Parent', tfh(3).h, 'Units', 'pixels', ...
                     'Style', 'checkbox',...
                     'Tag', 'PlotCSDmap', ...
                     'Value', chanSettingGrp(slctCh).pltCSDmap, ...
                     'String', 'CSD map', ...
-                    'Position', [0.787685774946921 0.551510204081633 0.178343949044586 0.102040816326531], ...
-                    'Callback', {@CSDmaporMUAmap, tfh(19).h}, ...
+                    'TooltipString', 'построить карту ПИТ', ...
+                    'Position', [14 30 78 20], ...
+                    'Callback', {}, ... {@CSDmaporMUAmap, tfh(22).h}, ... must be set after creation
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(17).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(20).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'DCshift', ...
                     'Value', chanSettingGrp(slctCh).dcShift, ...
                     'String', 'DC shift', ...
-                    'Position', [0.787685774946921 0.755102040816327 0.167728237791932 0.102040816326531], ...
+                    'TooltipString', 'вычесть постоянную составляющую', ...
+                    'Position', [6 136 70 20], ...
                     'Callback', [], ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(18).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(21).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox',...
                     'Tag', 'RawSignal', ...
                     'Value', chanSettingGrp(slctCh).rawSignal, ...
                     'String', 'raw signal', ...
-                    'Position', [0.222929936305732 0.559183673469388 0.199575371549894 0.102040816326531], ...
+                    'TooltipString', 'отобразить исходный сигнал', ...
+                    'Position', [103 158 80 20], ...
                     'Callback', [], ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(19).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(22).h = uicontrol('Parent', tfh(3).h, 'Units', 'pixels', ...
                     'Style', 'checkbox',...
                     'Tag', 'PlotSpkMap', ...
                     'Value', chanSettingGrp(slctCh).pltSpkMap, ...
                     'String', 'Spikes map', ...
-                    'Position', [0.787685774946921 0.469387755102041 0.201698513800425 0.102040816326531], ...
-                    'Callback', {@CSDmaporMUAmap, tfh(16).h}, ...
+                    'TooltipString', 'построить карту плотностей МПД', ...
+                    'Position', [105 30 88 20], ...
+                    'Callback', {@CSDmaporMUAmap, tfh(19).h}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
-set(tfh(16).h, 'Callback', {@CSDmaporMUAmap, tfh(19).h})
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
+set(tfh(19).h, 'Callback', {@CSDmaporMUAmap, tfh(22).h})
 
-tfh(20).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(23).h = uicontrol('Parent',tunFig, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'PlotMUA', ...
                     'Value', chanSettingGrp(slctCh).pltMUA, ...
                     'String', 'MUA', ...
-                    'Position', [0.556263269639066 0.755102040816327 0.125265392781316 0.102040816326531], ...
-                    'Callback', {}, ...
+                    'TooltipString', 'показывать МПД', ...
+                    'Position', [310 299 48 20], ...
+                    'Callback', {@EnablDisablBox, handles}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(21).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(24).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
                     'Style','checkbox', ...
                     'Tag', 'PlotLFP', ...
                     'Value', chanSettingGrp(slctCh).pltLFP, ...
                     'String', 'LFP', ...
-                    'Position', [0.556263269639066 0.575510204081633 0.125265392781316 0.102040816326531], ...
-                    'Callback', {}, ... {@MUAorMUAfreq, tfh(22).h}
+                    'TooltipString', 'показывать ЛПП', ...
+                    'Position', [80 299 68 20], ...
+                    'Callback', {@EnablDisablBox, handles}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(22).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(25).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'PlotMUAfreq', ...
                     'Value', chanSettingGrp(slctCh).pltMUAfreq, ...
                     'String', 'MUA freq', ...
-                    'Position', [0.556263269639066 0.66530612244898 0.182590233545648 0.102040816326531], ...
-                    'Callback', {}, ... {@MUAorMUAfreq, tfh(21).h}
+                    'TooltipString', 'показывать частоты МПД', ...
+                    'Position', [367 299 102 20], ...
+                    'Callback', {@EnablDisablBox, handles}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
-%set(tfh(21), 'Callback', {@MUAorMUAfreq, tfh(22).h})
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(23).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(26).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAbinTxt1', ...
                     'Value', [], ...
                     'String', 'MUA bin', ...
-                    'Position', [0.0233545647558386 0.375510204081634 0.114649681528662 0.0700000000000001], ...
+                    'Position', [32 173 54 16], ...
                     'Callback', {}, ...
-                    'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize', 9, 'HorizontalAlignment', 'right', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(24).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(27).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAbinTxt2', ...
                     'Value', [], ...
                     'String', '(ms)',...
-                    'Position', [0.114649681528662 0.289795918367347 0.0658174097664544 0.0775510204081634], ...
+                    'Position', [79 151 31 17], ...
                     'Callback', {}, ...
-                    'FontSize',9, 'HorizontalAlignment','left', ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize',9, 'HorizontalAlignment', 'left', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(25).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(28).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'SpkBin', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).muaBin), ...
-                    'Position', [0.0212314225053079 0.281632653061225 0.0934182590233546 0.102040816326531], ...
+                    'TooltipString', 'окно счёта МПД (бинн, мс)', ...
+                    'Position', [35 148 44 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
 
-tfh(26).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(29).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'PrecisFctTxt', ...
                     'Value', [], ...
-                    'String', {  'precision'; 'factor' }, ...
-                    'Position', [0.186836518046709 0.379591836734695 0.114649681528662 0.122448979591837], ...
+                    'String', 'Precision factor', ...
+                    'Position', [114 173 88 16], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(27).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(30).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'PrecisFct', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).precisF),...
-                    'Position', [0.199575371549894 0.281632653061225 0.0934182590233546 0.1], ...
+                    'TooltipString','количество сдвигов одного бинна (дробность)',...
+                    'Position', [134 148 44 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
 
-tfh(28).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(31).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAscalTxt1', ...
                     'Value', [], ...
-                    'String', 'MUA scale', ...
-                    'Position', [0.337579617834395 0.310204081632653 0.176220806794055 0.073469387755102], ...
+                    'String', {'MUA '; 'scale ' }, ...
+                    'Position', [33 100 45 38], ...
                     'Callback', {}, ...
-                    'FontSize', 10, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize', 9, 'HorizontalAlignment', 'right', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(29).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(32).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAscalTxt2', ...
                     'Value', [], ...
-                    'String', 'spik/ms', ...
-                    'Position', [0.469214437367304 0.220408163265306 0.106157112526539 0.073469387755102], ...
+                    'String', 'mua/ms', ...
+                    'Position', [138 114 50 16], ...
                     'Callback', {}, ...
                     'FontSize', 9, 'HorizontalAlignment', 'left', ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(30).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
-                    'Style','edit', ...
-                    'Tag','MUAscale', ...
+tfh(33).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
+                    'Style', 'edit', ...
+                    'Tag', 'MUAscale', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).muaScale), ...
-                    'Position', [0.360934182590234 0.208163265306123 0.106157112526539 0.102040816326531], ...
+                    'TooltipString','масштаб частоты МПД (мпд/мс)', ...
+                    'Position', [81 110 56 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
 
-tfh(31).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(34).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'pushbutton', ...
-                    'Tag','EnlargeMUAfrq',...
+                    'Tag', 'EnlargeMUAfrq',...
                     'Value', [], ...
-                    'String', '>', ...
-                    'Position', [0.426751592356688 0.0979591836734694 0.0658174097664544 0.102040816326531], ...
-                    'Callback', {@UpsizeAmplScale, tfh(30).h}, ...
-                    'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'String', '+', ...
+                    'TooltipString', 'показать мелкие детали частоты МПД', ...
+                    'Position', [112 82 31 24], ...
+                    'Callback', {@UpsizeAmplScale, tfh(33).h}, ...
+                    'FontSize', 12, ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(32).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(35).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'pushbutton', ...
                     'Tag', 'ReduceMUAfrq',...
                     'Value', [], ...
-                    'String', '<',...
-                    'Position', [0.346072186836518 0.0979591836734694 0.0658174097664544 0.102040816326531],...
-                    'Callback', {@DownsizeAmplScale, tfh(30).h}, ...
-                    'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'String', '-',...
+                    'TooltipString', 'показать крупные детали частоты МПД', ...
+                    'Position', [77 82 31 24], ...
+                    'Callback', {@DownsizeAmplScale, tfh(33).h}, ...
+                    'FontSize', 12, ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(33).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(36).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAtrsldTxt1', ...
                     'Value', [], ...
-                    'String',{  'MUA'; 'Threshold' }, ...
-                    'Position', [0.0828025477707006 0.110204081632653 0.157112526539278 0.126530612244898], ...
+                    'String', {'MUA '; 'threshold '}, ...
+                    'Position', [39 197 60 31], ...
                     'Callback', {}, ...
-                    'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'FontSize', 9, 'HorizontalAlignment', 'right', ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
 
-tfh(34).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(37).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'text', ...
                     'Tag', 'MUAtrsldTxt2', ...
                     'Value', [], ...
                     'String', 'std', ...
-                    'Position', [0.21656050955414 0.036734693877551 0.059447983014862 0.0653061224489796], ...
+                    'Position', [148 204 24 16], ...
                     'Callback', {}, ...
                     'FontSize', 9, 'HorizontalAlignment', 'left', ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
                 
-tfh(35).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(38).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
                     'Style', 'edit', ...
                     'Tag', 'MUAthrshld', ...
                     'Value', [], ...
                     'String', num2str(chanSettingGrp(slctCh).muaTrsld), ...
-                    'Position', [0.118895966029724 0.0122448979591837 0.0934182590233546 0.1],...
+                    'TooltipString', 'порог детекции МПД (стандартные отклонения)', ...
+                    'Position', [102 201 44 24], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
                     'BackgroundColor', [1, 1, 1]);
                 
-tfh(36).h = uicontrol('Parent', tunFig, 'Units', 'normalized', ...
+tfh(39).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
                     'Style', 'checkbox', ...
                     'Tag', 'InvertLFP', ...
                     'Value', chanSettingGrp(slctCh).invertLFP, ...
                     'String', 'invert LFP', ...
-                    'Position', [0.558386411889597 0.469387755102041 0.169851380042463 0.102040816326531], ...
+                    'TooltipString', 'инвертировать ЛПП', ...
+                    'Position', [103 136 77 20], ...
                     'Callback', {}, ...
                     'FontSize', 9, ...
-                    'BackgroundColor', [0.831, 0.816, 0.784]);
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
+                
+tfh(40).h = uicontrol('Parent', tfh(1).h, 'Units', 'pixels', ...
+                    'Style', 'checkbox', ...
+                    'Tag', 'CommZero', ...
+                    'Value', chanSettingGrp(slctCh).comZero, ...
+                    'String', 'Comm. Zero',...
+                    'TooltipString', 'рисовать ЛПП от общего нуля', ... сделать такое для МПД?
+                    'Position', [103 114 90 20], ...
+                    'Callback', {}, ...
+                    'FontSize', 9,...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
+                
+bufStr = {};
+jj = horzcat(chanSettingGrp(:).grpName);%all groups
+grpNms = unique(jj);%unique groups
+for t = 1:length(grpNms) %run over group names
+    rCh = find(jj == grpNms(t));%current group channels
+    bufStr = [bufStr; {[num2str(grpNms(t)), ': ', num2str(rCh(1)), '-', num2str(rCh(end))]}];%groups list
+end
+t = find(chanSettingGrp(slctCh).grpName == grpNms);
+tfh(41).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
+                    'Style', 'popupmenu', ...
+                    'Tag', 'ChGrpSelect', ...
+                    'Callback', {@ShowGroupSettings, handles}, ...
+                    'Position', [4 342 113 22], ...
+                    'String', bufStr, ...
+                    'TooltipString', 'выбрать группу каналов', ...
+                    'Value', t);
+                
+tfh(42).h = uicontrol('Parent', tfh(3).h, 'Units', 'pixels', ...
+                    'Style', 'checkbox', ...
+                    'Tag', 'ConturLin', ...
+                    'Value', chanSettingGrp(slctCh).contur, ...
+                    'String', 'contour', ...
+                    'TooltipString', 'рисовать контур плотностей МПД', ... вроде, должно рисовать и контур ПИТ
+                    'Position', [64 8 63 20], ...
+                    'Callback', {}, ...
+                    'FontSize', 9, ...
+                    'BackgroundColor', get(0,'defaultUicontrolBackgroundColor'));%[0.831, 0.816, 0.784]);
+                
+% tfh(43).h = uicontrol('Parent', tunFig, 'Units', 'pixels', ...
+%                     'Style', 'checkbox', ...
+%                     'Tag', 'ShowChGroup', ...
+%                     'String', 'show channels group', ...
+%                     'TooltipString', 'отобразить эту группу каналов', ...
+%                     'Position', [156 324 145 20], ...
+%                     'FontSize', 9);
+                
+tfh(44).h = uicontrol('Parent',tfh(1).h, 'Units', 'pixels', ...
+                    'Style','text',...
+                    'Tag','LFPlineColorTxt',...
+                    'String',{'LFP line '; 'color ' }, ...
+                    'FontSize', 9, 'HorizontalAlignment', 'right', ...
+                    'Position',[22 14 50 28]);
+
+clrList = getappdata(evi, 'clrList');%color list
+tfh(45).h = uicontrol('Parent',tfh(1).h, 'Units', 'pixels', ...
+                    'Style', 'popupmenu', ...
+                    'Tag','LFPlineColor', ...
+                    'String', clrList(:, 2), ...
+                    'TooltipString', 'выбрать цвет линий ЛПП',...
+                    'Position', [76 14 106 23], ...
+                    'Value', chanSettingGrp(slctCh).lfpLnClr, ...
+                    'Callback', {@ColorPreview, handles}, ...
+                    'BackgroundColor', clrList{chanSettingGrp(slctCh).lfpLnClr, 1}, ...
+                    'FontSize', 9);
+                
+tfh(46).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
+                    'Style', 'text', ...
+                    'Tag', 'MUAbarColorTxt', ...
+                    'String', {'MUA bar '; 'color ' }, ...
+                    'Position', [9 50 52 28], ...
+                    'FontSize', 9, 'HorizontalAlignment', 'right');
+            
+tfh(47).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
+                    'Style', 'popupmenu', ...
+                    'Tag', 'MUAbarColor', ...
+                    'Position', [64 50 106 23], ...
+                    'TooltipString', 'выбрать цвет маркеров МПД', ...
+                    'String', clrList(:, 2), ...
+                    'Value', chanSettingGrp(slctCh).muaBarClr, ...
+                    'Callback', {@ColorPreview, handles}, ...
+                    'BackgroundColor', clrList{chanSettingGrp(slctCh).muaBarClr, 1}, ...
+                    'FontSize', 9);
+
+tfh(48).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
+                    'Style', 'text', ...
+                    'Tag', 'MUAlineColorTxt', ...
+                    'String', {'MUA line '; 'color ' }, ...
+                    'Position', [70 13 52 28], ...
+                    'FontSize', 9, 'HorizontalAlignment', 'right');
+
+tfh(49).h = uicontrol('Parent', tfh(2).h, 'Units', 'pixels', ...
+                    'Style', 'popupmenu', ...
+                    'Tag', 'MUAlineColor', ...
+                    'Position', [127 13 106 23], ...
+                    'String', clrList(:, 2), ...
+                    'TooltipString', 'выбрать цвет линий частоты МПД', ...
+                    'Value', chanSettingGrp(slctCh).muaLnClr, ...
+                    'Callback', {@ColorPreview, handles}, ...
+                    'BackgroundColor', clrList{chanSettingGrp(slctCh).muaLnClr, 1}, ...
+                    'FontSize', 9);
 %= end of dialog window creation =%
 
 %transfer dialog-control handles
-setappdata(evi, 'tunChFigH', tunFig);%save tune-channel window handle
-setappdata(evi, 'tunFigHndls', tfh);%save tune figure handles
-
+setappdata(evi, 'tunChFigH', tunFig) %tune-channel window handle
+setappdata(evi, 'tunFigHndls', tfh) %tune figure handles
+copyChnSetGrp = chanSettingGrp;%copy of channels group settings
+setappdata(evi, 'copyChnSetGrp', copyChnSetGrp) %copy of channels group settings
+EnablDisablBox([], [], handles) %enable of disable controls on buttongroups
 set(tunFig, 'Visible', 'on')%show dialog
+
+
+
+% --- show settings of the selected group --- %
+function ShowGroupSettings(hObject, eventdata, handles)
+% hObject    handle to popupmenu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% tObj - target edit-object (change string in)
+%
+evi = handles.Eview;%handle of the application window
+tfh = getappdata(evi, 'tunFigHndls');%load handles of contorl of tune-channel window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+copyChnSetGrp = getappdata(evi, 'copyChnSetGrp');%copy of channels group settings
+clrList = getappdata(evi, 'clrList');%color list
+jj = horzcat(chanSettingGrp(:).grpName);%all groups
+grpNms = unique(jj);%unique groups
+slctCh = find(jj == grpNms(get(tfh(41).h, 'Value')), 1, 'first');%one first channel of the selected group
+prevCh = get(tfh(5).h, 'UserData');%previous channel group
+
+%= save setting of previously selected group =%
+for ch = 1:length(chanSettingGrp) %run over channels
+    if (chanSettingGrp(ch).grpName == chanSettingGrp(prevCh).grpName) %wanted group of channels
+        copyChnSetGrp(ch).lowCut = get(tfh(7).h, 'Value');%if od lowcut filtering
+        copyChnSetGrp(ch).lowCutFrq = str2double(get(tfh(8).h, 'String'));%%lowcut frequency
+        copyChnSetGrp(ch).highCut = get(tfh(10).h, 'Value');%if do highcut filtering
+        copyChnSetGrp(ch).highCutFrq = str2double(get(tfh(11).h, 'String'));%highcut frequency
+        copyChnSetGrp(ch).recovDC = get(tfh(12).h, 'Value');%if recovery DC signal from psedoDC
+        copyChnSetGrp(ch).rawSignal = get(tfh(21).h, 'Value');%if raw signal
+        copyChnSetGrp(ch).comRef = get(tfh(18).h, 'Value');%if common reference
+        copyChnSetGrp(ch).comZero = get(tfh(40).h, 'Value');%if common zero
+        copyChnSetGrp(ch).dcShift = get(tfh(20).h, 'Value');%if compensate DC
+        copyChnSetGrp(ch).invertLFP = get(tfh(39).h, 'Value');%if invert LFP
+        copyChnSetGrp(ch).pltCSDmap = get(tfh(19).h, 'Value');%if plot CSD map
+        copyChnSetGrp(ch).pltSpkMap = get(tfh(22).h, 'Value');%if plot spikes frequency map
+        copyChnSetGrp(ch).contur = get(tfh(42).h, 'Value');%if draw contour lines for CSD-map or MUA-map
+        copyChnSetGrp(ch).pltLFP = get(tfh(24).h, 'Value');%if plot LFP traces
+        copyChnSetGrp(ch).pltMUA = get(tfh(23).h, 'Value');%if plot MUA bars
+        copyChnSetGrp(ch).pltMUAfreq = get(tfh(25).h, 'Value');%if plot MUA-frequency traces
+        copyChnSetGrp(ch).lfpScale = str2double(get(tfh(15).h, 'String'));%LFP-scale (mV)
+        copyChnSetGrp(ch).muaTrsld = str2double(get(tfh(38).h, 'String'));%MUA threshold (std)
+        copyChnSetGrp(ch).muaBin = str2double(get(tfh(28).h, 'String'));%bin step for MUA frequency (ms)
+        copyChnSetGrp(ch).precisF = str2double(get(tfh(30).h, 'String'));%precision factor (for MUA frequency calculation)
+        copyChnSetGrp(ch).muaScale = str2double(get(tfh(33).h, 'String'));%MUA-scale (spikes/ms)
+        copyChnSetGrp(ch).lfpLnClr = get(tfh(45).h, 'Value');%LFP lines color (number in clrList array)
+        copyChnSetGrp(ch).muaBarClr = get(tfh(47).h, 'Value');%MUA bars color (number in clrList array)
+        copyChnSetGrp(ch).muaLnClr = get(tfh(49).h, 'Value');%MUA lines color (number in clrList array)
+    end
+end
+%= end of (save setting of previously selected group) =%
+setappdata(evi, 'copyChnSetGrp', copyChnSetGrp) %copy of channels group settings
+
+%= show setting of newly selected group =%
+set(tfh(5).h, 'String', ['channel group: ', num2str(chanSettingGrp(slctCh).grpName)], 'UserData', slctCh);
+set(tfh(7).h, 'Value', copyChnSetGrp(slctCh).lowCut)
+set(tfh(8).h, 'String', num2str(copyChnSetGrp(slctCh).lowCutFrq))
+set(tfh(10).h, 'Value', copyChnSetGrp(slctCh).highCut)
+set(tfh(11).h, 'String', num2str(copyChnSetGrp(slctCh).highCutFrq))
+set(tfh(12).h, 'Value', copyChnSetGrp(slctCh).recovDC)
+set(tfh(15).h, 'String', num2str(copyChnSetGrp(slctCh).lfpScale))
+set(tfh(18).h, 'Value', copyChnSetGrp(slctCh).comRef)
+set(tfh(19).h, 'Value', copyChnSetGrp(slctCh).pltCSDmap)
+set(tfh(20).h, 'Value', copyChnSetGrp(slctCh).dcShift)
+set(tfh(21).h, 'Value', copyChnSetGrp(slctCh).rawSignal)
+set(tfh(22).h, 'Value', copyChnSetGrp(slctCh).pltSpkMap)
+set(tfh(23).h, 'Value', copyChnSetGrp(slctCh).pltMUA)
+set(tfh(24).h, 'Value', copyChnSetGrp(slctCh).pltLFP)
+set(tfh(25).h, 'Value', copyChnSetGrp(slctCh).pltMUAfreq)
+set(tfh(28).h, 'String', num2str(copyChnSetGrp(slctCh).muaBin))
+set(tfh(30).h, 'String', num2str(copyChnSetGrp(slctCh).precisF))
+set(tfh(33).h, 'String', num2str(copyChnSetGrp(slctCh).muaScale))
+set(tfh(38).h, 'String', num2str(copyChnSetGrp(slctCh).muaTrsld))
+set(tfh(39).h, 'Value', copyChnSetGrp(slctCh).invertLFP)
+set(tfh(40).h, 'Value', copyChnSetGrp(slctCh).comZero)
+set(tfh(42).h, 'Value', copyChnSetGrp(slctCh).contur)
+set(tfh(45).h, 'Value', copyChnSetGrp(slctCh).lfpLnClr)
+set(tfh(45).h, 'BackgroundColor', clrList{get(tfh(45).h, 'Value'), 1})
+set(tfh(47).h, 'Value', copyChnSetGrp(slctCh).muaBarClr)
+set(tfh(47).h, 'BackgroundColor', clrList{get(tfh(47).h, 'Value'), 1})
+set(tfh(49).h, 'Value', copyChnSetGrp(slctCh).muaLnClr)
+set(tfh(49).h, 'BackgroundColor', clrList{get(tfh(49).h, 'Value'), 1})
+EnablDisablBox([], [], handles) %enable of disable controls on buttongroups
+%= end of (show setting of newly selected group) =%
+
+set(tfh(5).h, 'UserData', slctCh);%new previous channel group
 
 
 
 % --- accept setting of channels group and apply --- %
 function ApplyNewChanSets(hObject, eventdata, handles)
-% hObject    handle to Merge (see GCBO)
+% hObject    handle to calling control (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %
 %accept setting of channels group and apply
 evi = handles.Eview;%handle of the application window
-tunFig = getappdata(evi, 'tunChFigH');%load tune-channel window handle
 tfh = getappdata(evi, 'tunFigHndls');%load handles of contorl of tune-channel window
 chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
-slctCh = get(tfh(2).h, 'UserData');%original number of selected channel
+copyChnSetGrp = getappdata(evi, 'copyChnSetGrp');%copy of channels group settings
 zavp = getappdata(evi, 'zavp');%additional parameters
 lfpOrig = getappdata(evi, 'lfpOrig');%original LFP
 lfp = getappdata(evi, 'lfp');%filtered LFP
 spksOrig = getappdata(evi, 'spksOrig');
 spks = getappdata(evi, 'spks');
 lfpVar = getappdata(evi, 'lfpVar');
-hd = getappdata(evi, 'hd');
+hd = getappdata(evi, 'hd');%file header
 muaprgChang = false;%mua threshold was changed for the group of channels
+trnsfrmlist = getappdata(evi, 'trnsfrmlist');%signal transformations list
 
+chSetGrpOld = chanSettingGrp;%copy of previouse settings
+chSetGrpFldNms = fieldnames(chanSettingGrp);%field names
 for ch = 1:length(chanSettingGrp) %run over channels (looking for the group)
-    if (chanSettingGrp(ch).grpName == chanSettingGrp(slctCh).grpName) %same group
-        nLwCtFr = str2double(get(tfh(5).h, 'String'));%new lowcut frequency
-        nHiCtFr = str2double(get(tfh(8).h, 'String'));%new highcut frequency
-        newLwCt = ((chanSettingGrp(ch).lowCut ~= get(tfh(4).h, 'Value')) || ... %check or uncheck
-                   ((chanSettingGrp(ch).lowCutFrq ~= nLwCtFr) && chanSettingGrp(ch).lowCut && get(tfh(4).h, 'Value')) ...
-                  );%lowcut filtering changed
-        chanSettingGrp(ch).lowCut = get(tfh(4).h, 'Value');%if do lowcut filtering
-        chanSettingGrp(ch).lowCutFrq = nLwCtFr;%lowcut frequency
-        
-        newHgCt = ((chanSettingGrp(ch).highCut ~= get(tfh(7).h, 'Value')) || ... %check or uncheck
-                   ((chanSettingGrp(ch).highCutFrq ~= nHiCtFr) && chanSettingGrp(ch).highCut && get(tfh(7).h, 'Value')) ...
-                  );%highcut filtering changed
-        chanSettingGrp(ch).highCut = get(tfh(7).h, 'Value');%if do highcut filtering
-        chanSettingGrp(ch).highCutFrq = nHiCtFr;%highcut frequency
-        
-        rercvDC = (chanSettingGrp(ch).recovDC ~= get(tfh(9).h, 'Value'));%change recovery from pseudoDC
-        chanSettingGrp(ch).recovDC = get(tfh(9).h, 'Value');%if do DC recovery from pseudoDC
-        chanSettingGrp(ch).rawSignal = get(tfh(18).h, 'Value');%if plot raw signal
-        
-        chanSettingGrp(ch).comRef = get(tfh(15).h, 'Value');%if do common reference subtraction
-        chanSettingGrp(ch).dcShift = get(tfh(17).h, 'Value');%if compensate DC
-        chanSettingGrp(ch).pltCSDmap = get(tfh(16).h, 'Value');%if plot CSD map
-        chanSettingGrp(ch).pltSpkMap = get(tfh(19).h, 'Value');%if plot spikes map
-        chanSettingGrp(ch).pltLFP = get(tfh(21).h, 'Value');%if plot LFP traces
-        chanSettingGrp(ch).pltMUA = get(tfh(20).h, 'Value');%if plot MUA bars
-        chanSettingGrp(ch).pltMUAfreq = get(tfh(22).h, 'Value');%if plot MUA-frequency traces
-        chanSettingGrp(ch).lfpScale = str2double(get(tfh(12).h, 'String'));%verticale scale (mV, amplitude)
-        newPolar = (chanSettingGrp(ch).invertLFP ~= get(tfh(36).h, 'Value')); %if invert LFP
-        chanSettingGrp(ch).invertLFP = get(tfh(36).h, 'Value');%if invert LFP
-        
-        %= LFP filtration =%
-        if (newLwCt || newHgCt || rercvDC) %new filtration parameters
-            lfp(:, ch, :) = lfpOrig(:, ch, :);%start from sourse LFP
-            if (chanSettingGrp(ch).recovDC) %recovery DC from pseudoDC
-                lfp(:, ch, :) = RecovDCfromPseudo(lfp(:, ch, :), zavp.dwnSmplFrq);%recovery
-            end
-            
-            if (chanSettingGrp(ch).lowCut && (chanSettingGrp(ch).lowCutFrq < (zavp.dwnSmplFrq / 2))) %lowcut filtration
-                if (chanSettingGrp(ch).lowCutFrq < 2) %small cutting frequency
-                    lfp(:, ch, :) = ZavRCfilt(lfp(:, ch, :), chanSettingGrp(ch).lowCutFrq, zavp.dwnSmplFrq, 'high');%RC-filter, lowcut
-                else %quite large cutting frequency
-                    lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'high', chanSettingGrp(ch).lowCutFrq, 2);%lowcut
-                end
-            end
-            if (chanSettingGrp(ch).highCut && (chanSettingGrp(ch).highCutFrq < (zavp.dwnSmplFrq / 2))) %highcut filtration
-                if (chanSettingGrp(ch).highCutFrq < 2) %small cutting frequency
-                    lfp(:, ch, :) = ZavRCfilt(lfp(:, ch, :), chanSettingGrp(ch).highCutFrq, zavp.dwnSmplFrq, 'low');%RC-filter, lowcut
-                else
-                    lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'low', chanSettingGrp(ch).highCutFrq, 2);%highcut
-                end
-            end
-        end
-        %= end of (LFP filtration) =%
-        
-        %polarity
-        if (newPolar) %if invert LFP
-            lfp(:, ch, :) = -1 * lfp(:, ch, :);%invert LFP
-        end
-        
-        chanSettingGrp(ch).muaBin = str2double(get(tfh(25).h, 'String'));%bin step for MUA frequency (ms)
-        chanSettingGrp(ch).precisF = str2double(get(tfh(27).h, 'String'));%precision factor (for MUA frequency calculation)
-        chanSettingGrp(ch).muaScale = str2double(get(tfh(30).h, 'String'));%MUA-scale (spikes/ms)
-    
-        %= MUA threshold change =%
-        newMUAtrsld = str2double(get(tfh(35).h, 'String'));%new MUA threshold
-        if (chanSettingGrp(ch).muaTrsld ~= newMUAtrsld) %MUA threshold was changed
-            chanSettingGrp(ch).muaTrsld = newMUAtrsld;%new threshold
-            if isfield(spksOrig, 'ampl')
-                spks(ch) = spksOrig(ch);%original spikes
-                for sw = 1:hd.lActualEpisodes
-                    ii = double(spksOrig(ch, sw).ampl) <= (-lfpVar(ch) * newMUAtrsld);
-                    spks(ch, sw).tStamp = spksOrig(ch, sw).tStamp(ii);
-                    spks(ch, sw).ampl = spksOrig(ch, sw).ampl(ii);
-                    if isempty(spks(ch, sw).tStamp)
-                        spks(ch, sw).tStamp = zeros(0, 1);
-                        spks(ch, sw).ampl = zeros(0, 1);
-                    end
-                end
-                muaprgChang = true;%changes was done
-            end
-        end
-        %= end of (MUA threshold change) =%
-    end
-end
-delete(tunFig)
-setappdata(evi, 'chanSettingGrp', chanSettingGrp);%save channels group setting
-setappdata(evi, 'lfp', lfp) %refiltered LFP
+    nLwCtFr = copyChnSetGrp(ch).lowCutFrq;%new lowcut frequency
+    nHiCtFr = copyChnSetGrp(ch).highCutFrq;%new highcut frequency
+    newLwCt = ((chanSettingGrp(ch).lowCut ~= copyChnSetGrp(ch).lowCut) || ... %check or uncheck
+               ((chanSettingGrp(ch).lowCutFrq ~= nLwCtFr) && chanSettingGrp(ch).lowCut && copyChnSetGrp(ch).lowCut) ...
+              );%lowcut filtering changed
+    chanSettingGrp(ch).lowCut = copyChnSetGrp(ch).lowCut;%if do lowcut filtering
+    chanSettingGrp(ch).lowCutFrq = nLwCtFr;%lowcut frequency
 
+    newHgCt = ((chanSettingGrp(ch).highCut ~= copyChnSetGrp(ch).highCut) || ... %check or uncheck
+               ((chanSettingGrp(ch).highCutFrq ~= nHiCtFr) && chanSettingGrp(ch).highCut && copyChnSetGrp(ch).highCut) ...
+              );%highcut filtering changed
+    chanSettingGrp(ch).highCut = copyChnSetGrp(ch).highCut;%if do highcut filtering
+    chanSettingGrp(ch).highCutFrq = nHiCtFr;%highcut frequency
+
+    rercvDC = (chanSettingGrp(ch).recovDC ~= copyChnSetGrp(ch).recovDC);%change recovery from pseudoDC
+    chanSettingGrp(ch).recovDC = copyChnSetGrp(ch).recovDC;%if do DC recovery from pseudoDC
+    chanSettingGrp(ch).rawSignal = copyChnSetGrp(ch).rawSignal;%if plot raw signal
+
+    chanSettingGrp(ch).comRef = copyChnSetGrp(ch).comRef;%if do common reference subtraction
+    chanSettingGrp(ch).comZero = copyChnSetGrp(ch).comZero;%if checked common zero view mode
+    chanSettingGrp(ch).dcShift = copyChnSetGrp(ch).dcShift;%if compensate DC
+    chanSettingGrp(ch).pltCSDmap = copyChnSetGrp(ch).pltCSDmap;%if plot CSD map
+    chanSettingGrp(ch).pltSpkMap = copyChnSetGrp(ch).pltSpkMap;%if plot spikes map
+    chanSettingGrp(ch).contur = copyChnSetGrp(ch).contur;%if draw contour
+    chanSettingGrp(ch).pltLFP = copyChnSetGrp(ch).pltLFP;%if plot LFP traces
+    chanSettingGrp(ch).pltMUA = copyChnSetGrp(ch).pltMUA;%if plot MUA bars
+    chanSettingGrp(ch).pltMUAfreq = copyChnSetGrp(ch).pltMUAfreq;%if plot MUA-frequency traces
+    chanSettingGrp(ch).lfpScale = copyChnSetGrp(ch).lfpScale;%verticale scale (mV, amplitude)
+    newPolar = (chanSettingGrp(ch).invertLFP ~= copyChnSetGrp(ch).invertLFP); %if invert LFP
+    chanSettingGrp(ch).invertLFP = copyChnSetGrp(ch).invertLFP;%if invert LFP
+
+    %= LFP filtration =%
+    if (newLwCt || newHgCt || rercvDC) %new filtration parameters
+        lfp(:, ch, :) = lfpOrig(:, ch, :);%start from sourse LFP
+        trnsfrmlist(ch).list = [];%clear list
+        if (chanSettingGrp(ch).recovDC) %recovery DC from pseudoDC
+            lfp(:, ch, :) = RecovDCfromPseudo(lfp(:, ch, :), zavp.dwnSmplFrq);%recovery
+            trnsfrmlist(ch).list{end + 1} = 'recov DC from pseudo DC';%add line
+        end
+
+        if (chanSettingGrp(ch).lowCut && (chanSettingGrp(ch).lowCutFrq < (zavp.dwnSmplFrq / 2))) %lowcut filtration
+            if (chanSettingGrp(ch).lowCutFrq < 2) %small cutting frequency
+                lfp(:, ch, :) = ZavRCfilt(lfp(:, ch, :), chanSettingGrp(ch).lowCutFrq, zavp.dwnSmplFrq, 'high');%RC-filter, lowcut
+            else %quite large cutting frequency
+                lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'high', chanSettingGrp(ch).lowCutFrq, 2);%lowcut
+            end
+            trnsfrmlist(ch).list{end + 1} = ['lowcut filtration (', num2str(chanSettingGrp(ch).lowCutFrq), ' Hz)'];%add line
+        end
+        if (chanSettingGrp(ch).highCut && (chanSettingGrp(ch).highCutFrq < (zavp.dwnSmplFrq / 2))) %highcut filtration
+            if (chanSettingGrp(ch).highCutFrq < 2) %small cutting frequency
+                lfp(:, ch, :) = ZavRCfilt(lfp(:, ch, :), chanSettingGrp(ch).highCutFrq, zavp.dwnSmplFrq, 'low');%RC-filter, lowcut
+            else
+                lfp(:, ch, :) = ZavFilter(lfp(:, ch, :), zavp.dwnSmplFrq, 'low', chanSettingGrp(ch).highCutFrq, 2);%highcut
+            end
+            trnsfrmlist(ch).list{end + 1} = ['highcut filtration (', num2str(chanSettingGrp(ch).highCutFrq), ' Hz)'];%add line
+        end
+    end
+    %= end of (LFP filtration) =%
+
+    %polarity
+    if (newPolar) %if invert LFP
+        lfp(:, ch, :) = -1 * lfp(:, ch, :);%invert LFP
+        if (chanSettingGrp(ch).invertLFP) %invert LFP
+            trnsfrmlist(ch).list{end + 1} = 'inversion';%add line (inverted)
+        else
+            trnsfrmlist(ch).list(ismember(trnsfrmlist(ch).list, 'inversion')) = [];%remove line
+        end
+    end
+
+    chanSettingGrp(ch).muaBin = copyChnSetGrp(ch).muaBin;%bin step for MUA frequency (ms)
+    chanSettingGrp(ch).precisF = copyChnSetGrp(ch).precisF;%precision factor (for MUA frequency calculation)
+    chanSettingGrp(ch).muaScale = copyChnSetGrp(ch).muaScale;%MUA-scale (spikes/ms)
+
+    %= MUA threshold change =%
+    newMUAtrsld = copyChnSetGrp(ch).muaTrsld;%new MUA threshold
+    if (chanSettingGrp(ch).muaTrsld ~= newMUAtrsld) %MUA threshold was changed
+        chanSettingGrp(ch).muaTrsld = newMUAtrsld;%new threshold
+        if isfield(spksOrig, 'ampl')
+            spks(ch) = spksOrig(ch);%original spikes
+            for sw = 1:hd.lActualEpisodes
+                ii = double(spksOrig(ch, sw).ampl) <= (-lfpVar(ch) * newMUAtrsld);
+                spks(ch, sw).tStamp = spksOrig(ch, sw).tStamp(ii);
+                spks(ch, sw).ampl = spksOrig(ch, sw).ampl(ii);
+                if isempty(spks(ch, sw).tStamp)
+                    spks(ch, sw).tStamp = zeros(0, 1);
+                    spks(ch, sw).ampl = zeros(0, 1);
+                end
+            end
+            muaprgChang = true;%changes was done
+        end
+    end
+    %= end of (MUA threshold change) =%
+
+    %= line colors =%
+    chanSettingGrp(ch).lfpLnClr = copyChnSetGrp(ch).lfpLnClr;%LFP lines color (number in clrList array)
+    chanSettingGrp(ch).muaBarClr = copyChnSetGrp(ch).muaBarClr;%MUA bars color (number in clrList array)
+    chanSettingGrp(ch).muaLnClr = copyChnSetGrp(ch).muaLnClr;%MUA lines color (number in clrList array)
+    %= end of (line colors) =%
+        
+    for fldN = 1:length(chSetGrpFldNms) %run over fields
+        eval(['isChng = isequal(chanSettingGrp.', chSetGrpFldNms{fldN}, ', chSetGrpOld.', chSetGrpFldNms{fldN}, ');'])
+        if ~isChng %changed value
+            chanSettingGrp(ch).changed = true;%was changed
+            break;%out of (for fldN)
+        end
+    end
+end %end of (for ch = 1:length(chanSettingGrp) %run over channels (looking for the group))
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
+setappdata(evi, 'lfp', lfp) %refiltered LFP
 if muaprgChang %changes was done
     setappdata(evi, 'spks', spks) %accept changes
 end
+setappdata(evi, 'trnsfrmlist', trnsfrmlist) %signal transformations list
 
+
+
+% --- accept setting of channels group and apply --- %
+function CloseTunChannelsWindow(hObject, eventdata, handles)
+% hObject    handle to OK button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% nObj - checkbox to be uncheked
+%
+%reaction on "OK"-button click of TunChannel window
+ShowGroupSettings([], [], handles)
+ApplyNewChanSets([], [], handles);%apply settings for current group
+evi = handles.Eview;%handle of the application window
+tunFig = getappdata(evi, 'tunChFigH');%load tune-channel window handle
+delete(tunFig) %delete tune-channel window
 PlotAll(handles);%plot with new parameters
 
 
 
 function CSDmaporMUAmap(hObject, eventdata, nObj)
-% hObject    handle to Merge (see GCBO)
+% hObject    handle to checkbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % nObj - checkbox to be uncheked
 %
@@ -2064,21 +2523,45 @@ end
 
 
 
-function MUAorMUAfreq(hObject, eventdata, nObj)
-% hObject    handle to Merge (see GCBO)
+function EnablDisablBox(hObject, eventdata, handles)
+% hObject    handle to checkbox (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% nObj - checkbox to be uncheked
+% handles - application handles
 %
-%choose one of line type: MUA (verticale lines) or MUA frequency (timecourse)
-if get(hObject, 'Value') %one of map was choosed
-    set(nObj, 'Value', 0)%switch of CSDmap/MUAmap
+%change accessibility of corresponding buttonbox
+evi = handles.Eview;%handle of the application window
+tfh = getappdata(evi, 'tunFigHndls');%load handles of contorl of tune-channel window
+
+if (isequal(get(hObject, 'Tag'), 'PlotLFP') || isempty(hObject)) %LFP-lines
+    chldrn = get(tfh(1).h, 'Children');%controls on LFPlines-buttongroup
+    if get(tfh(24).h, 'Value') %PlotLFP is switched on
+        for t = 1:length(chldrn) %run over controls on LFPlines-buttongroup
+            set(chldrn(t), 'Enable', 'on')%switch on LFPlines-buttongroup
+        end
+    else
+        for t = 1:length(chldrn) %run over controls on LFPlines-buttongroup
+            set(chldrn(t), 'Enable', 'off')%switch off LFPlines-buttongroup
+        end
+    end
+end
+if (isequal(get(hObject, 'Tag'), 'PlotMUA') || isequal(get(hObject, 'Tag'), 'PlotMUAfreq') || isempty(hObject)) %MUA-lines
+    chldrn = get(tfh(2).h, 'Children');%controls on MUAlines-buttongroup
+    if (get(tfh(23).h, 'Value') || get(tfh(25).h, 'Value')) %PlotMUA or PlotMUAfrq is switched on
+        for t = 1:length(chldrn) %run over controls on MUAlines-buttongroup
+            set(chldrn(t), 'Enable', 'on')%switch on MUAlines-buttongroup
+        end
+    else
+        for t = 1:length(chldrn) %run over controls on MUAlines-buttongroup
+            set(chldrn(t), 'Enable', 'off')%switch off MUAlines-buttongroup
+        end
+    end
 end
 
 
 
 % --- change LFP scale (downsize) --- %
 function DownsizeAmplScale(hObject, eventdata, tObj)
-% hObject    handle to Merge (see GCBO)
+% hObject    handle to Downsize button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % tObj - target edit-object (change string in)
 %
@@ -2099,7 +2582,7 @@ set(tObj, 'String', num2str(vScl))%set new value
 
 % --- change LFP scale (upsize) --- %
 function UpsizeAmplScale(hObject, eventdata, tObj)
-% hObject    handle to Merge (see GCBO)
+% hObject    handle to Upsize button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %
@@ -2115,6 +2598,17 @@ if (vScl <= 0)
     vScl = 0.001;
 end
 set(tObj, 'String', num2str(vScl))
+
+
+
+function ColorPreview(hObject, eventdata, handles)
+% hObject    handle to color selector (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+%
+%show color example
+clrList = getappdata(handles.Eview, 'clrList');%color list
+set(hObject, 'BackgroundColor', clrList{get(hObject, 'Value'), 1})
 
 
 % --------------------------------------------------------------------
@@ -2134,9 +2628,15 @@ if (~isempty(brst) && isequal(get(handles.ShowBrst, 'State'), 'on')) %bursts exi
         if isempty(brst)
             set(handles.ShowBrst, 'Enable', 'off')
         end
-        setappdata(evi, 'brst', brst);
-        setappdata(evi, 'selectedBrst', []);
+        setappdata(evi, 'brst', brst) %all bursts data
+        setappdata(evi, 'selectedBrst', []) %number of selected burst
         set(handles.SaveBursts, 'UserData', 1)%set flag of bursts changed
+        
+        chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+        for ch = 1:length(chanSettingGrp) %run over channels
+            chanSettingGrp(ch).changed = true;%redraw all lines
+        end
+        setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
         PlotAll(handles);%plot with new parameters
     end
 elseif (~isempty(manlDet) && get(handles.CutManual, 'Value')) %delete current manyally detected event
@@ -2144,10 +2644,16 @@ elseif (~isempty(manlDet) && get(handles.CutManual, 'Value')) %delete current ma
     manlDet(sn) = [];%delete current event
     segms = getappdata(evi, 'segms');%segments of recordation
     segms(sn, :) = [];%delete corresponding segment
-    setappdata(evi, 'manlDet', manlDet);%manually detected events
-    setappdata(evi, 'segms', segms);%segments of recordation
+    setappdata(evi, 'manlDet', manlDet) %manually detected events
+    setappdata(evi, 'segms', segms) %segments of recordation
     set(handles.SegmTxt, 'String', num2str(length(manlDet)));
     set(handles.CutManual, 'String', ['mdet ', num2str(length(manlDet))]);
+    
+    chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+    for ch = 1:length(chanSettingGrp) %run over channels
+        chanSettingGrp(ch).changed = true;%redraw all lines
+    end
+    setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
     PlotAll(handles);%plot with new parameters
 end
 
@@ -2187,7 +2693,7 @@ if ~isempty(brst) %bursts exist
     lfp = double(lfp);
     spks = getappdata(evi, 'spks');
     %lfpVar = getappdata(evi, 'lfpVar');
-    hd = getappdata(evi, 'hd');
+    hd = getappdata(evi, 'hd');%file header
     zavp = getappdata(evi, 'zavp');
     prm.Fs = 1 / zavp.siS;%sampling frequency for raw data
     
@@ -2277,7 +2783,7 @@ function ManualDetect_ClickedCallback(hObject, eventdata, handles)
 %manual detection
 evi = handles.Eview;%main form handle
 lfpLn = getappdata(evi, 'lfpLn');%lfp-line handles
-if ~isempty(lfpLn) 
+if ~isempty(lfpLn) %data was loaded to application
     manDetPrmH = handles.ManDetPrm;%table of manual detection parameters
     if isequal(get(manDetPrmH, 'Visible'), 'on') %accept changes
         set(manDetPrmH, 'Visible', 'off')
@@ -2285,6 +2791,12 @@ if ~isempty(lfpLn)
         set(evi, 'WindowButtonDownFcn', {@Eview_WindowButtonDownFcn, handles})%reaction on button down
         set(evi, 'WindowButtonMotionFcn', {@Eview_WindowButtonMotionFcn, handles})%reaction on button motion
         set(evi, 'WindowButtonUpFcn', {@Eview_WindowButtonUpFcn, handles})%reaction on button up
+        
+        chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+        for ch = 1:length(chanSettingGrp) %run over channels
+            chanSettingGrp(ch).changed = true;%redraw all lines
+        end
+        setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
         PlotAll(handles);%plot with new parameters
     else %show table of manual detection parameters
         set(manDetPrmH, 'Visible', 'on', 'Position', [0.23714, 0.80854, 0.33, 0.19008])
@@ -2309,7 +2821,7 @@ evi = handles.Eview;%main form handle
 pth = getappdata(evi, 'pth');%directory
 flNm = getappdata(evi, 'flNm');%filename
 zavp = getappdata(evi, 'zavp');%additional parameters
-hd = getappdata(evi, 'hd');%header
+hd = getappdata(evi, 'hd');%file header
 
 manlDet = getappdata(evi, 'manlDet');%manually detected events
 if ~isempty(manlDet) %events was detected
@@ -2435,7 +2947,7 @@ function SelectChann_Callback(hObject, eventdata, handles)
 %channels visibility settings
 evi = handles.Eview;%main form handle
 lfpLn = getappdata(evi, 'lfpLn');%lfp-line handles
-if ~isempty(lfpLn) 
+if ~isempty(lfpLn) %data was loaded to application
     chanSelecH = handles.ChannSelector;%table of channels selection parameters
     if isequal(get(chanSelecH, 'Visible'), 'on') %accept changes
         set(chanSelecH, 'Visible', 'off')
@@ -2444,6 +2956,12 @@ if ~isempty(lfpLn)
         set(evi, 'WindowButtonDownFcn', {@Eview_WindowButtonDownFcn, handles})%reaction on button down
         set(evi, 'WindowButtonMotionFcn', {@Eview_WindowButtonMotionFcn, handles})%reaction on button motion
         set(evi, 'WindowButtonUpFcn', {@Eview_WindowButtonUpFcn, handles})%reaction on button up
+        
+        chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+        for ch = 1:length(chanSettingGrp) %run over channels
+            chanSettingGrp(ch).changed = true;%redraw all lines
+        end
+        setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
         PlotAll(handles);%plot with new parameters
     else %show channels selector
         set(chanSelecH, 'Visible', 'on')
@@ -2467,6 +2985,7 @@ function SelectAllCh_Callback(hObject, eventdata, handles)
 chanSelecH = handles.ChannSelector;%table of channels selections
 chTabData = get(chanSelecH, 'Data');%channel selection table
 for t = 1:size(chTabData, 1) %run over rows of table (channels)
+    chTabData{t, 2} = true;%select all channels
     chTabData{t, 3} = true;%select all channels
 end
 set(chanSelecH, 'Data', chTabData)%set new table data
@@ -2482,6 +3001,7 @@ function InvertSelection_Callback(hObject, eventdata, handles)
 chanSelecH = handles.ChannSelector;%table of channels selections
 chTabData = get(chanSelecH, 'Data');%channel selection table
 for t = 1:size(chTabData, 1) %run over rows of table (channels)
+    chTabData{t, 2} = ~chTabData{t, 2};%invert the selection
     chTabData{t, 3} = ~chTabData{t, 3};%invert the selection
 end
 set(chanSelecH, 'Data', chTabData)%set new table data
@@ -2494,7 +3014,13 @@ function WinAvr_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 if get(hObject, 'Value')
+    evi = handles.Eview;%handle of the application window
     set(handles.Average, 'Value', 1);
+    chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+    for ch = 1:length(chanSettingGrp) %run over channels
+        chanSettingGrp(ch).changed = true;%redraw all lines
+    end
+    setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
     PlotAll(handles);%plot with new parameters
 end
 
@@ -2599,12 +3125,25 @@ function ChannSelector_CellSelectionCallback(hObject, eventdata, handles)
 chanSelecH = handles.ChannSelector;%table of channels selections
 ii = unique(eventdata.Indices(:, 1));%indices of selected rows
 set(chanSelecH, 'UserData', eventdata.Indices)%save current selection
-if ((length(ii) > 1) && all(diff(ii) == 1) && all(eventdata.Indices(:, 2) == 3)) %change channels selection
+if ((length(ii) > 1) && all(diff(ii) == 1) && (all(eventdata.Indices(:, 2) == 2) || all(eventdata.Indices(:, 2) == 3))) %change channels selection
     chTabData = get(chanSelecH, 'Data');%read current table content
-    jj = horzcat(chTabData{ii, 3});%selection falgs
-    trg = ~(sum(jj) >= sum(~jj));%target value (prevailing selection)
-    for z = ii' %run over selected raws
-        chTabData{z, 3} = trg;%change value of selected cells (set prevailing value)
+    if (eventdata.Indices(:, 2) == 2) %individual channels
+        jj = horzcat(chTabData{ii, 2});%selection falgs
+        trg = ~(sum(jj) >= sum(~jj));%target value (prevailing selection)
+        for z = ii' %run over selected raws
+            chTabData{z, 2} = trg;%change value of selected cells (set prevailing value)
+            chTabData{z, 3} = trg;%selection state
+        end
+    else %group of channels
+        jj = horzcat(chTabData{ii, 3});%selection falgs
+        trg = ~(sum(jj) >= sum(~jj));%target value (prevailing selection)
+        ngc = unique(vertcat(chTabData{ii, 4}));%names of groups of selected channels
+        for z = 1:size(chTabData, 1) %run over channels
+            if any(chTabData{z, 4} == ngc) %selected group
+                chTabData{z, 2} = trg;%selection state
+                chTabData{z, 3} = trg;%selection state
+            end
+        end
     end
     set(chanSelecH, 'Data', chTabData)%set table data
     
@@ -2612,6 +3151,18 @@ if ((length(ii) > 1) && all(diff(ii) == 1) && all(eventdata.Indices(:, 2) == 3))
 %     viewport = javaObjectEDT(jscrollpane.getViewport);%jave-handle
 %     jtable = javaObjectEDT(viewport.getView);%jave-handle of table content
 %     jtable.scrollRowToVisible(ii(end));%make selected rows visible again
+elseif all(eventdata.Indices(:, 2) == 3) %change visibility of a channel group
+    chTabData = get(chanSelecH, 'Data');%read current table content
+    jj = horzcat(chTabData{ii, 3});%selection falgs
+    trg = ~(sum(jj) >= sum(~jj));%target value (prevailing selection)
+    ngc = unique(vertcat(chTabData{ii, 4}));%names of groups of selected channels
+    for z = 1:size(chTabData, 1) %run over channels
+        if any(chTabData{z, 4} == ngc) %selected group
+            chTabData{z, 2} = trg;%selection state
+            chTabData{z, 3} = trg;%selection state
+        end
+    end
+    set(chanSelecH, 'Data', chTabData)%set table data
 end
 
 if ((length(ii) > 1) && all(diff(ii) == 1) && all(eventdata.Indices(:, 2) == 4)) %change channels groups
@@ -2639,7 +3190,7 @@ if ((length(ii) > 1) && all(diff(ii) == 1) && all(eventdata.Indices(:, 2) == 4))
         chanSettingGrp(z) = chanSettingGrp(t);%copy setting from template
     end
     set(chanSelecH, 'Data', chTabData)%set table data
-    setappdata(evi, 'chanSettingGrp', chanSettingGrp);%save channels group setting
+    setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
 end
 
 
@@ -2659,7 +3210,7 @@ for z = ii' %run over selected rows (channels)
     chTabData{z, 4} = chanSettingGrp(z).grpName;%copy group name
 end
 set(chanSelecH, 'Data', chTabData)%set table data
-setappdata(evi, 'chanSettingGrp', chanSettingGrp);%save channels group setting
+setappdata(evi, 'chanSettingGrp', chanSettingGrp) %save channels group setting
     
 
 
@@ -2670,7 +3221,8 @@ function CSDcMapMax_Callback(hObject, eventdata, handles)
 
 %change color axis
 set(handles.CSDcMapMin, 'String', ['-', get(handles.CSDcMapMax, 'String')]) %set minimum automatically
-caxis(handles.LFP_ax, [str2double(get(handles.CSDcMapMin, 'String')), str2double(get(handles.CSDcMapMax, 'String'))])%colorbar range
+%caxis(handles.LFP_ax, [str2double(get(handles.CSDcMapMin, 'String')), str2double(get(handles.CSDcMapMax, 'String'))])%colorbar range
+caxis([0, 1])
 
 
 
@@ -2680,7 +3232,9 @@ function SpkCMap_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %change color axis
-caxis(handles.LFP_ax, [str2double(get(handles.SpkCMapMin, 'String')), str2double(get(handles.SpkCMapMax, 'String'))])%colorbar range
+set(handles.SpkCMapMin, 'String', '0') %set minimum automatically
+%caxis(handles.LFP_ax, [str2double(get(handles.SpkCMapMin, 'String')), str2double(get(handles.SpkCMapMax, 'String'))])%colorbar range
+caxis([0, 1])
 
 
 
@@ -2726,3 +3280,90 @@ function ShowMarkers_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 PlotAll(handles);
+
+
+
+% --------------------------------------------------------------------
+function TransformList_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to TransformList (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%show actual transformations list (list of signal conversion steps)
+
+evi = handles.Eview;%handle of the application window
+trnsfrmlist = getappdata(evi, 'trnsfrmlist');%signal transformations list
+trnsfrmlistFig = findobj('Name', 'ShowTransformList');%getappdata(evi, 'trnsfrmlistFigH');%load transformations-list-figure handle
+
+%= creat transformation list window =%
+if isempty(trnsfrmlistFig) %window exist
+    trnsfrmlistFig = figure('Name', 'ShowTransformList', 'Units', 'normalized', 'MenuBar','none',...
+        'NumberTitle', 'off', 'Position', [0.40546875 0.412109375 0.28671875 0.3681640625], ...
+        'Resize', 'off', 'Tag', 'ShowTransformListFig', 'Visible', 'off');
+
+    tflfh(1:2) = struct('h', []);%structure with tune figure control handles
+
+    tflfh(1).h = uicontrol('Parent', trnsfrmlistFig, 'Units', 'normalized', ...
+                           'Style', 'listbox', ...
+                           'Tag','TrnsList', ...
+                           'Position', [0.0626702997275204 0.0689655172413793 0.85558583106267 0.822281167108753]);
+
+    tflfh(2).h = uicontrol('Parent', trnsfrmlistFig, 'Units', 'normalized', ...
+                           'Style', 'text', ...
+                           'Tag', 'TitleText', ...
+                           'String','Transformations list', ...
+                           'Position', [0.269754768392371 0.925729442970822 0.411444141689373 0.0371352785145889], ...
+                           'FontSize', 10, ...
+                           'BackgroundColor', [0.9, 0.9, 0.9]);
+
+    setappdata(evi, 'trnsfrmlistFigH', trnsfrmlistFig) %transformations-list-figure window handle
+    setappdata(evi, 'trnsfrmlistFigHndls', tflfh) %transformations-list-figure control handles
+else
+    tflfh = getappdata(evi, 'trnsfrmlistFigHndls');%load tune figure handles
+end
+
+set(tflfh(1).h, 'String', trnsfrmlist(1).list);
+% for t = 1:length(trnsfrmlist) %run over transformations
+%     set(tflfh(2).h, 'String', trnsfrmlist{t});
+% end
+
+set(trnsfrmlistFig, 'Visible', 'on')%show dialog
+
+function rawLFP = TunRawSignal(rawLFP, ch, handles)
+%apply settings of channel group to raw signal
+%
+%rawLFP - raw signal
+%ch - first channel of current channel group
+%handles - structure with handles and user data (see GUIDATA)
+%
+evi = handles.Eview;%handle of the application window
+chanSettingGrp = getappdata(evi, 'chanSettingGrp');%load channels group setting
+hd = getappdata(evi, 'hd');%file header
+frq = 1e6 / hd.ch_si(ch);%original discretization frequency
+
+%= raw LFP filtration =%
+if (chanSettingGrp(ch).recovDC) %recovery DC from pseudoDC
+    rawLFP = RecovDCfromPseudo(rawLFP, frq);%recovery
+end
+
+if (chanSettingGrp(ch).lowCut && (chanSettingGrp(ch).lowCutFrq < (frq / 2))) %lowcut filtration
+    if (chanSettingGrp(ch).lowCutFrq < 2) %small cutting frequency
+        rawLFP = ZavRCfilt(rawLFP, chanSettingGrp(ch).lowCutFrq, frq, 'high');%RC-filter, lowcut
+    else %quite large cutting frequency
+        rawLFP = ZavFilter(rawLFP, frq, 'high', chanSettingGrp(ch).lowCutFrq, 2);%lowcut
+    end
+end
+if (chanSettingGrp(ch).highCut && (chanSettingGrp(ch).highCutFrq < (frq / 2))) %highcut filtration
+    if (chanSettingGrp(ch).highCutFrq < 2) %small cutting frequency
+        rawLFP = ZavRCfilt(rawLFP, chanSettingGrp(ch).highCutFrq, frq, 'low');%RC-filter, lowcut
+    else
+        rawLFP = ZavFilter(rawLFP, frq, 'low', chanSettingGrp(ch).highCutFrq, 2);%highcut
+    end
+end
+
+%= end of (LFP filtration) =%
+
+%polarity
+if chanSettingGrp(ch).invertLFP %invert signal
+    rawLFP = -1 * rawLFP;%invert LFP
+end
